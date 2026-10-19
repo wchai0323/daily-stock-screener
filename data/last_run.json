@@ -1,5 +1,5 @@
 {
- "run_at_utc": "2026-10-19T06:42:22+00:00",
+ "run_at_utc": "2026-10-19T06:49:37+00:00",
  "screen_date": "2026-10-19",
  "max_companies": null,
  "targets": 6047,
@@ -19,6 +19,25 @@
  "priority": 6,
  "new": 10,
  "exits": 7,
- "mail": "sent",
+ "mail": "skipped (skip_mail)",
+ "yahoo": {
+  "tickers": 31,
+  "errors": {
+   "v7_quote": {
+    "count": 1,
+    "first": "HTTPError: HTTP Error 401: "
+   },
+   "quoteSummary": {
+    "count": 11,
+    "first": "HTTPError: HTTP Error 401: "
+   }
+  },
+  "filled_short_pct_float": 20,
+  "filled_pe_ttm": 20,
+  "filled_pe_fwd": 20,
+  "filled_peg": 9,
+  "filled_sector": 20,
+  "filled_industry": 20
+ },
  "sec_requests": 12
 }
