@@ -1,5 +1,5 @@
 {
- "run_at_utc": "2026-10-19T07:02:26+00:00",
+ "run_at_utc": "2026-10-19T07:08:41+00:00",
  "screen_date": "2026-10-19",
  "max_companies": null,
  "targets": 6047,
@@ -10,26 +10,71 @@
  },
  "with_financials": 6047,
  "with_prices": 2171,
- "universe": 1238,
+ "universe": 1235,
  "passed": 31,
  "lanes": {
   "G": 12,
   "C": 19
  },
  "priority": 6,
- "new": 10,
- "exits": 7,
- "mail": "sent",
+ "new": 11,
+ "exits": 8,
+ "mail": "skipped (skip_mail)",
  "yahoo": {
   "tickers": 31,
-  "errors": {},
-  "still_missing": [],
-  "filled_short_pct_float": 31,
-  "filled_pe_ttm": 30,
-  "filled_pe_fwd": 31,
-  "filled_peg": 15,
-  "filled_sector": 31,
-  "filled_industry": 31
+  "errors": {
+   "v7_quote": {
+    "count": 1,
+    "first": "HTTPError: HTTP Error 401: "
+   },
+   "quoteSummary_pass1": {
+    "count": 31,
+    "first": "HTTPError: HTTP Error 401: "
+   },
+   "quoteSummary_pass2": {
+    "count": 31,
+    "first": "HTTPError: HTTP Error 401: "
+   }
+  },
+  "still_missing": [
+   "KLIC",
+   "AGX",
+   "GNTX",
+   "STAA",
+   "JOE",
+   "LSCC",
+   "VIAV",
+   "DAR",
+   "NWPX",
+   "INVX",
+   "PRDO",
+   "SWBI",
+   "AMN",
+   "CDNA",
+   "LZ",
+   "GNK",
+   "EPAM",
+   "IRWD",
+   "COCO",
+   "CARG",
+   "LPG",
+   "NRDS",
+   "TTD",
+   "INSW",
+   "NMRK",
+   "HCC",
+   "ADEA",
+   "VSXY",
+   "EE",
+   "MSGE",
+   "KRMN"
+  ],
+  "filled_short_pct_float": 0,
+  "filled_pe_ttm": 0,
+  "filled_pe_fwd": 0,
+  "filled_peg": 6,
+  "filled_sector": 0,
+  "filled_industry": 0
  },
- "sec_requests": 43
+ "sec_requests": 13
 }
