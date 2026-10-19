@@ -1,5 +1,5 @@
 {
- "run_at_utc": "2026-10-19T06:49:37+00:00",
+ "run_at_utc": "2026-10-19T06:57:05+00:00",
  "screen_date": "2026-10-19",
  "max_companies": null,
  "targets": 6047,
@@ -27,17 +27,58 @@
     "count": 1,
     "first": "HTTPError: HTTP Error 401: "
    },
-   "quoteSummary": {
-    "count": 11,
+   "quoteSummary_pass1": {
+    "count": 31,
+    "first": "HTTPError: HTTP Error 401: "
+   },
+   "quoteSummary_pass2": {
+    "count": 31,
+    "first": "HTTPError: HTTP Error 401: "
+   },
+   "quoteSummary_pass3": {
+    "count": 31,
     "first": "HTTPError: HTTP Error 401: "
    }
   },
-  "filled_short_pct_float": 20,
-  "filled_pe_ttm": 20,
-  "filled_pe_fwd": 20,
-  "filled_peg": 9,
-  "filled_sector": 20,
-  "filled_industry": 20
+  "still_missing": [
+   "HEI",
+   "KLIC",
+   "AGX",
+   "GNTX",
+   "STAA",
+   "JOE",
+   "LSCC",
+   "VIAV",
+   "DAR",
+   "NWPX",
+   "INVX",
+   "PRDO",
+   "SWBI",
+   "AMN",
+   "CDNA",
+   "LZ",
+   "GNK",
+   "IRWD",
+   "COCO",
+   "CARG",
+   "LPG",
+   "NRDS",
+   "TTD",
+   "INSW",
+   "NMRK",
+   "HCC",
+   "ADEA",
+   "VSXY",
+   "EE",
+   "MSGE",
+   "KRMN"
+  ],
+  "filled_short_pct_float": 0,
+  "filled_pe_ttm": 0,
+  "filled_pe_fwd": 0,
+  "filled_peg": 6,
+  "filled_sector": 0,
+  "filled_industry": 0
  },
  "sec_requests": 12
 }
