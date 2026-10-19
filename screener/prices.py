@@ -78,15 +78,100 @@ def parse_info(info):
     }
 
 
-def fetch_quote_info(tickers, pause=0.4):
-    """1층 통과 종목만: 공매도 비율, PER(TTM·Forward), PEG, 섹터·업종 (종목당 1회 호출)."""
-    import yfinance as yf
+QS_URL = "https://query2.finance.yahoo.com/v10/finance/quoteSummary/{t}"
+QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
+QS_MODULES = "assetProfile,summaryDetail,defaultKeyStatistics,financialData"
+FIELDS = ("short_pct_float", "pe_ttm", "pe_fwd", "peg", "sector", "industry")
 
-    out = {}
+
+def _raw(v):
+    return v.get("raw") if isinstance(v, dict) else v
+
+
+def parse_quote_summary(js):
+    """quoteSummary 원본 JSON → yfinance .info와 같은 평평한 dict."""
+    res = ((js or {}).get("quoteSummary") or {}).get("result") or []
+    flat = {}
+    for module in (res[0] if res else {}).values():
+        if isinstance(module, dict):
+            for k, v in module.items():
+                v = _raw(v)
+                if v is not None and k not in flat:
+                    flat[k] = v
+    return flat
+
+
+def parse_quote_batch(js):
+    """v7 quote 원본 JSON → {ticker: 평평한 dict}."""
+    rows = ((js or {}).get("quoteResponse") or {}).get("result") or []
+    return {r.get("symbol"): {k: _raw(v) for k, v in r.items()} for r in rows if r.get("symbol")}
+
+
+def _merge(base, extra):
+    for k in FIELDS:
+        if base.get(k) is None and extra.get(k) is not None:
+            base[k] = extra[k]
+    return base
+
+
+def _err(diag, stage, e):
+    msg = f"{type(e).__name__}: {str(e)[:150]}"
+    diag["errors"].setdefault(stage, {"count": 0, "first": msg})["count"] += 1
+
+
+def fetch_quote_info(tickers, pause=0.5, retries=2):
+    """1층 통과 종목만: 공매도 비율, PER(TTM·Forward), PEG, 섹터·업종.
+
+    Yahoo가 GitHub 서버 요청을 자주 막아서 세 경로를 차례로 시도한다.
+      1) v7 quote 일괄 조회 (PER·Forward PER)
+      2) 종목별 quoteSummary (섹터·업종·PEG·공매도·PER)
+      3) yfinance .info (위 둘이 비었을 때)
+    반환: ({ticker: dict}, 진단 dict) — 진단은 실행 요약에 남긴다.
+    """
+    import yfinance as yf
+    from yfinance.data import YfData
+
+    data = YfData()
+    out = {t: parse_info({}) for t in tickers}
+    diag = {"tickers": len(tickers), "errors": {}}
+
+    # 1) 일괄 조회
+    for i in range(0, len(tickers), 50):
+        chunk = list(tickers)[i:i + 50]
+        for attempt in range(retries + 1):
+            try:
+                js = data.get_raw_json(QUOTE_URL, params={"symbols": ",".join(chunk), "formatted": "false"})
+                for t, info in parse_quote_batch(js).items():
+                    if t in out:
+                        _merge(out[t], parse_info(info))
+                break
+            except Exception as e:  # noqa: BLE001
+                if attempt == retries:
+                    _err(diag, "v7_quote", e)
+                time.sleep(2 * (attempt + 1))
+
+    # 2) 종목별 상세 → 3) .info
     for t in tickers:
-        try:
-            out[t] = parse_info(yf.Ticker(t).info)
-        except Exception:  # noqa: BLE001 - 조회 실패는 빈 값으로
-            out[t] = parse_info({})
+        if all(out[t].get(k) is not None for k in ("sector", "pe_fwd")):
+            continue
+        got = False
+        for attempt in range(retries + 1):
+            try:
+                js = data.get_raw_json(QS_URL.format(t=t), params={"modules": QS_MODULES, "formatted": "false"})
+                _merge(out[t], parse_info(parse_quote_summary(js)))
+                got = out[t].get("sector") is not None
+                break
+            except Exception as e:  # noqa: BLE001
+                if attempt == retries:
+                    _err(diag, "quoteSummary", e)
+                time.sleep(2 * (attempt + 1))
+        if not got:
+            try:
+                _merge(out[t], parse_info(yf.Ticker(t).info))
+            except Exception as e:  # noqa: BLE001
+                _err(diag, "info", e)
         time.sleep(pause)
-    return out
+
+    for k in FIELDS:
+        diag[f"filled_{k}"] = sum(out[t].get(k) is not None for t in tickers)
+    return out, diag

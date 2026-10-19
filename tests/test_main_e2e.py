@@ -45,7 +45,7 @@ def _install_fakes(monkeypatch, main, universe):
     info = {"shortPercentOfFloat": 0.03, "trailingPE": 31.4, "forwardPE": 22.0, "trailingPegRatio": 1.15,
             "sector": "Technology", "industry": "Software - Application"}
     monkeypatch.setattr(main.prices, "fetch_quote_info",
-                        lambda tickers: {t: main.prices.parse_info(info) for t in tickers})
+                        lambda tickers: ({t: main.prices.parse_info(info) for t in tickers}, {"errors": {}}))
 
 
 def test_two_day_run(env, monkeypatch):

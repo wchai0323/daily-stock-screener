@@ -260,3 +260,16 @@ def test_parse_info_and_valuation_cell():
     assert v["pe_ttm"] is None and v["pe_fwd"] is None and v["peg"] == 2.3 and v["sector"] is None
     cell = report._valuation({"pe_ttm": None, "pe_fwd": 40.0, "peg": None, "psr": 6.25, "opm": -0.1})
     assert "PER 적자 / 40.0" in cell and "PSR 6.2" in cell
+
+
+def test_parse_yahoo_raw_responses():
+    from screener import prices
+    qs = {"quoteSummary": {"result": [{
+        "assetProfile": {"sector": "Technology", "industry": "Semiconductors"},
+        "summaryDetail": {"trailingPE": {"raw": 31.2, "fmt": "31.20"}, "forwardPE": {"raw": 20.5}},
+        "defaultKeyStatistics": {"pegRatio": {"raw": 1.3}, "shortPercentOfFloat": {"raw": 0.04}}}]}}
+    v = prices.parse_info(prices.parse_quote_summary(qs))
+    assert v == {"short_pct_float": 0.04, "pe_ttm": 31.2, "pe_fwd": 20.5, "peg": 1.3,
+                 "sector": "Technology", "industry": "Semiconductors"}
+    batch = {"quoteResponse": {"result": [{"symbol": "AAA", "trailingPE": 15.0, "forwardPE": 12.0}]}}
+    assert prices.parse_info(prices.parse_quote_batch(batch)["AAA"])["pe_fwd"] == 12.0

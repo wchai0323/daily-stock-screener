@@ -151,7 +151,8 @@ def main():
     log(f"유니버스 {len(universe):,} → 1층 통과 {len(passed)}")
 
     # 6) 2층 자동 점수 + 밸류에이션·분류 (Yahoo 조회는 통과 종목만)
-    qi = prices.fetch_quote_info([c["ticker"] for c in passed])
+    qi, yahoo_diag = prices.fetch_quote_info([c["ticker"] for c in passed])
+    log(f"Yahoo 조회: {yahoo_diag}")
     for c in passed:
         c.update(qi.get(c["ticker"]) or prices.parse_info({}))
         rev = c.get("revenue_ttm")
@@ -209,6 +210,7 @@ def main():
         "new": None if new is None else len(new),
         "exits": None if exits is None else len(exits),
         "mail": mail_status,
+        "yahoo": yahoo_diag,
         "sec_requests": client.request_count,
     }
     store.save_run_summary(summary)
