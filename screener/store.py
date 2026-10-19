@@ -80,6 +80,14 @@ def previous_results(day: dt.date):
     return files[-1].stem, pd.read_csv(files[-1])
 
 
+def save_run_summary(summary):
+    """data/last_run.json: 가장 최근 실행 요약 (커밋됨)."""
+    ROOT.mkdir(parents=True, exist_ok=True)
+    path = ROOT / "last_run.json"
+    path.write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
+    return path
+
+
 def load_holdings():
     p = Path(__file__).resolve().parent.parent / "config" / "holdings.txt"
     if not p.exists():

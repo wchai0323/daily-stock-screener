@@ -81,3 +81,20 @@ def test_two_day_run(env, monkeypatch):
     assert "신규 진입 (1)" in html2 and "NEW" in html2
     assert "이탈 (1)" in html2 and "H1 희석" in html2
     assert (tmp / "snapshots" / "2026-10-19.csv.gz").exists()
+
+
+def test_mail_secret_missing_is_recorded(env, monkeypatch, capsys):
+    """메일 시크릿이 없으면 실행은 성공하되, 실행 요약과 Actions 경고에 실패가 남아야 한다."""
+    import json
+
+    main, store, tmp = env
+    monkeypatch.delenv("SKIP_MAIL")
+    for k in ("SMTP_USER", "SMTP_PASSWORD", "MAIL_TO"):
+        monkeypatch.delenv(k, raising=False)
+    _install_fakes(monkeypatch, main, {1: ("GOOD", make_facts(REV, gpm=0.6))})
+    assert main.main() == 0
+    summary = json.loads((tmp / "last_run.json").read_text(encoding="utf-8"))
+    assert summary["mail"].startswith("failed: MailConfigError")
+    assert "SMTP_PASSWORD" in summary["mail"]
+    assert summary["max_companies"] is None and summary["targets"] == 1
+    assert "::warning title=메일 발송 실패::" in capsys.readouterr().out

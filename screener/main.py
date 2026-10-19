@@ -175,14 +175,42 @@ def main():
     subject = f"[스크리너] {today} · 통과 {len(passed)}"
     if new is not None:
         subject += f" · 신규 {len(new)} · 이탈 {len(exits)}"
-    if os.environ.get("SKIP_MAIL") != "1":
+    if os.environ.get("SKIP_MAIL") == "1":
+        mail_status = "skipped (skip_mail)"
+    else:
         from . import mailer
-        mailer.send(subject, html_body, [res_path])
+        try:
+            mailer.send(subject, html_body, [res_path])
+            mail_status = "sent"
+        except Exception as e:  # noqa: BLE001 - 결과 저장은 계속하고 실패를 기록·경고
+            mail_status = f"failed: {type(e).__name__}: {e}"
+            # GitHub Actions 화면에 경고로 표시
+            print(f"::warning title=메일 발송 실패::{mail_status}", flush=True)
 
     state["fetched"] = fetched
     state["last_index_date"] = today.isoformat()
     store.save_state(state)
-    log(f"완료 (SEC 요청 {client.request_count:,}건)")
+
+    # 실행 요약: 로그 없이도 결과를 확인할 수 있게 저장소에 남긴다
+    summary = {
+        "run_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "screen_date": today.isoformat(),
+        "max_companies": limit or None,
+        "targets": len(targets),
+        "refreshed": {"new": len(missing), "recent_filers": len(filed), "stale": len(stale)},
+        "with_financials": len(companies),
+        "with_prices": len(px),
+        "universe": len(universe),
+        "passed": len(passed),
+        "lanes": {"G": sum(c["lane"] == "G" for c in passed), "C": sum(c["lane"] == "C" for c in passed)},
+        "priority": sum(bool(c.get("priority")) for c in passed),
+        "new": None if new is None else len(new),
+        "exits": None if exits is None else len(exits),
+        "mail": mail_status,
+        "sec_requests": client.request_count,
+    }
+    store.save_run_summary(summary)
+    log(f"완료 (SEC 요청 {client.request_count:,}건, 메일 {mail_status})")
     return 0
 
 

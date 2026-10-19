@@ -7,6 +7,10 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 
+class MailConfigError(RuntimeError):
+    """메일 시크릿이 없을 때. 발송 실패와 구분해 기록한다."""
+
+
 def send(subject, html_body, attachments=()):
     # 시크릿이 비어 있으면 빈 문자열로 들어오므로 'or'로 기본값 처리
     host = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
@@ -14,9 +18,9 @@ def send(subject, html_body, attachments=()):
     user = os.environ.get("SMTP_USER")
     password = os.environ.get("SMTP_PASSWORD")
     to = [a.strip() for a in os.environ.get("MAIL_TO", "").split(",") if a.strip()]
-    if not (user and password and to):
-        print("[mail] SMTP_USER / SMTP_PASSWORD / MAIL_TO 가 없어 발송을 건너뜁니다.")
-        return False
+    missing = [k for k, v in (("SMTP_USER", user), ("SMTP_PASSWORD", password), ("MAIL_TO", to)) if not v]
+    if missing:
+        raise MailConfigError("시크릿 누락: " + ", ".join(missing))
 
     msg = MIMEMultipart()
     msg["Subject"] = subject
