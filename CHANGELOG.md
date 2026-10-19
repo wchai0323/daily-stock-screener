@@ -19,3 +19,7 @@
 
 ## 2026-10-19 (3)
 - 메일·CSV에 섹터/업종, TTM PER, Forward PER, PEG(Yahoo), PSR(시총 ÷ SEC TTM 매출) 추가. Yahoo 조회는 통과 종목만
+
+## 2026-10-19 (4)
+- TTM PER은 SEC 순이익(시총 ÷ TTM 순이익), 섹터·업종은 SEC SIC 분류로 계산. Yahoo는 Forward PER·PEG·공매도만
+- 시가총액 주식 수: SEC 표지 주식 수와 희석 가중평균 주식 수 중 큰 값 (다중 클래스 회사의 시총 과소 계산 수정, 예: HEICO)

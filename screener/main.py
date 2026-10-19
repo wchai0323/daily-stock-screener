@@ -142,7 +142,7 @@ def main():
         p = px.get(c["ticker"])
         if p:
             c.update(p)
-            shares = c.get("shares_out") or c.get("diluted_shares_last")
+            shares = screen.market_cap_shares(c.get("shares_out"), c.get("diluted_shares_last"))
             c["mkt_cap"] = c["price"] * shares if shares else None
     log(f"주가 수신 {len(px):,}개")
 

@@ -129,6 +129,13 @@ def hard_filter(c):
     return (not reasons), lane, reasons
 
 
+def market_cap_shares(cover_shares, diluted_shares):
+    """시가총액용 주식 수. 주식 종류가 여럿인 회사는 SEC 표지에 일부 종류만 나올 수 있어
+    (예: HEICO), 모든 종류를 포함하는 손익계산서 희석 주식 수와 비교해 큰 값을 쓴다."""
+    vals = [v for v in (cover_shares, diluted_shares) if v]
+    return max(vals) if vals else None
+
+
 def is_cyclical(c):
     sic = c.get("sic")
     return sic is not None and any(lo <= sic <= hi for lo, hi in C.C_EXCLUDED_SIC_RANGES)

@@ -286,3 +286,11 @@ def test_net_income_ttm_and_sectors():
     assert sectors.sector_of(7372) == "소프트웨어·IT서비스"
     assert sectors.sector_of(3812) == "항공·방산"
     assert sectors.industry_of("SEMICONDUCTORS & RELATED DEVICES") == "Semiconductors & Related Devices"
+
+
+def test_market_cap_shares_uses_larger_count():
+    # 표지에 한 종류만 나온 다중 클래스 회사: 희석 주식 수가 더 크면 그것을 쓴다
+    assert screen.market_cap_shares(28e6, 139e6) == 139e6
+    assert screen.market_cap_shares(100e6, 98e6) == 100e6
+    assert screen.market_cap_shares(None, 50e6) == 50e6
+    assert screen.market_cap_shares(None, None) is None
