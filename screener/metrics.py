@@ -49,6 +49,7 @@ def compute(series):
     m["gpm_prev"] = _ratio(gp_p, rev_p)
     m["gp_growth"] = _growth(gp, gp_p)
     m["op_income_ttm"] = op
+    m["net_income_ttm"] = ttm("net_income") if "net_income" in series else None
     m["opm"] = _ratio(op, rev)
     m["opm_prev"] = _ratio(op_p, rev_p)
     m["opm_change"] = _sub(m["opm"], m["opm_prev"])

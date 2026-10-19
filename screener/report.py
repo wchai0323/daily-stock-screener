@@ -8,7 +8,7 @@ from . import config as C
 
 RESULT_COLS = [
     "ticker", "name", "sector", "industry", "lane", "auto_score", "auto_score_pct", "priority", "mkt_cap",
-    "pe_ttm", "pe_fwd", "peg", "psr", "rev_growth", "q_yoy",
+    "pe_ttm", "pe_fwd", "peg", "psr", "net_income_ttm", "rev_growth", "q_yoy",
     "accel", "gpm", "ind_gpm_median", "opm", "opm_change", "fcf_margin", "fcf_yield", "dilution",
     "net_debt_ebitda", "runway_months", "rule_of_40", "short_pct_float", "price", "range_pos", "ma200_gap",
     "entry_tags", "period_end", "latest_filed", "ind_group", "sic",
@@ -79,9 +79,10 @@ def _x(v, digits=1):
 
 
 def _valuation(c):
-    """PER TTM / Fwd, PEG, PSR를 한 칸에. TTM PER이 없고 영업적자면 '적자'."""
+    """PER TTM / Fwd, PEG, PSR를 한 칸에. 순이익이 0 이하면 TTM PER은 '적자'."""
     pe_ttm = _x(c.get("pe_ttm"))
-    if pe_ttm == "–" and (c.get("opm") is not None and c["opm"] < 0):
+    ni = c.get("net_income_ttm")
+    if pe_ttm == "–" and ((ni is not None and ni <= 0) or (ni is None and (c.get("opm") or 0) < 0)):
         pe_ttm = "적자"
     return (f"PER {pe_ttm} / {_x(c.get('pe_fwd'))}<br>"
             f"<span style='color:#666'>PEG {_x(c.get('peg'), 2)} · PSR {_x(c.get('psr'))}</span>")
@@ -198,7 +199,8 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
 
     parts.append(f"<h2 {H2}>자동점수 상위 {min(C.TOP_N, len(passed))}</h2>")
     parts.append("<p style='margin:2px 0;font-size:11px;color:#666'>★ = 1순위 후보. 업종 = 같은 업종(SIC) 매출총이익률 40백분위(G 차선 흑자 기준선). "
-                 "진입 참고는 점수가 아닌 분할매수 속도 참고용.</p>")
+                 "진입 참고는 점수가 아닌 분할매수 속도 참고용. TTM PER·PSR은 SEC 재무로 계산, "
+                 "Forward PER·PEG는 Yahoo 컨센서스(조회 실패 시 –). 섹터·업종은 SEC 업종 분류(SIC).</p>")
     parts.append(_table(CAND_HEAD, _cand_rows(passed[:C.TOP_N], holdings)))
     parts.append("<p style='font-size:11px;color:#777'>전체 통과 종목과 항목별 점수는 첨부 CSV에 있습니다. "
                  "남은 2층 31점(잔고·역DCF·TAM·경영진·내부자·가이던스·기관)과 3·4층은 체크리스트 검증 단계에서 채웁니다.</p>")

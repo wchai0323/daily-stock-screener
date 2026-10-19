@@ -36,7 +36,7 @@ def make_facts(rev_q, gpm=0.6, opm_q=None, shares_q=None, cash=500e6, assets_q=N
                             "NetCashProvidedByUsedInOperatingActivities",
                             "PaymentsToAcquirePropertyPlantAndEquipment", "DepreciationDepletionAndAmortization",
                             "WeightedAverageNumberOfDilutedSharesOutstanding", "Assets",
-                            "CashAndCashEquivalentsAtCarryingValue", "LongTermDebt"]}
+                            "CashAndCashEquivalentsAtCarryingValue", "LongTermDebt", "NetIncomeLoss"]}
 
     def add(tag, start, end, val, form):
         rec = {"end": end.isoformat(), "val": val, "form": form, "filed": (end + dt.timedelta(days=35)).isoformat(),
@@ -63,6 +63,7 @@ def make_facts(rev_q, gpm=0.6, opm_q=None, shares_q=None, cash=500e6, assets_q=N
                 add("Revenues", s, e, r, form)
                 add("CostOfRevenue", s, e, r * (1 - gpm), form)
                 add("OperatingIncomeLoss", s, e, r * opm_q[i], form)
+                add("NetIncomeLoss", s, e, r * opm_q[i] * 0.75, form)
                 add("WeightedAverageNumberOfDilutedSharesOutstanding", s, e, shares_q[i], form)
             # 현금흐름은 연초부터 누적값
             add("NetCashProvidedByUsedInOperatingActivities", fy_start, e, ytd["ocf"], form)
@@ -77,6 +78,7 @@ def make_facts(rev_q, gpm=0.6, opm_q=None, shares_q=None, cash=500e6, assets_q=N
                     add("Revenues", fy_start, e, sum(rev_q[j] for j in full), form)
                     add("CostOfRevenue", fy_start, e, sum(rev_q[j] * (1 - gpm) for j in full), form)
                     add("OperatingIncomeLoss", fy_start, e, sum(rev_q[j] * opm_q[j] for j in full), form)
+                    add("NetIncomeLoss", fy_start, e, sum(rev_q[j] * opm_q[j] * 0.75 for j in full), form)
                     add("WeightedAverageNumberOfDilutedSharesOutstanding", fy_start, e, shares_q[i], form)
     units = lambda tag: "shares" if "Shares" in tag else "USD"
     gaap = {t: {"units": {units(t): rows}} for t, rows in tags.items() if rows}
@@ -273,3 +275,14 @@ def test_parse_yahoo_raw_responses():
                  "sector": "Technology", "industry": "Semiconductors"}
     batch = {"quoteResponse": {"result": [{"symbol": "AAA", "trailingPE": 15.0, "forwardPE": 12.0}]}}
     assert prices.parse_info(prices.parse_quote_batch(batch)["AAA"])["pe_fwd"] == 12.0
+
+
+def test_net_income_ttm_and_sectors():
+    from screener import sectors
+    m = metrics.compute(facts.build_series(facts.compact(make_facts(REV))))
+    # 최근 4분기 매출 739M × 영업이익률 10% × 0.75
+    assert abs(m["net_income_ttm"] - sum(REV[-4:]) * 0.1 * 0.75) < 1
+    assert sectors.sector_of(3674) == "반도체·전자부품"
+    assert sectors.sector_of(7372) == "소프트웨어·IT서비스"
+    assert sectors.sector_of(3812) == "항공·방산"
+    assert sectors.industry_of("SEMICONDUCTORS & RELATED DEVICES") == "Semiconductors & Related Devices"

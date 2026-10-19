@@ -6,7 +6,10 @@ SEC 원본은 기업당 수 MB라서, 필요한 태그만 남긴 '압축본'을 
 import datetime as dt
 
 # 개념별 후보 태그 (앞쪽이 우선). 'max'는 같은 기간에 여러 태그가 있으면 최댓값 사용.
+COMPACT_VERSION = 2   # 2: 순이익(net_income) 태그 추가
+
 DURATION_CONCEPTS = {
+    "net_income": (["NetIncomeLoss", "NetIncomeLossAvailableToCommonStockholdersBasic", "ProfitLoss"], "first"),
     "revenue": (["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
                  "RevenueFromContractWithCustomerIncludingAssessedTax", "SalesRevenueNet",
                  "SalesRevenueGoodsNet", "SalesRevenueServicesNet", "RevenuesNetOfInterestExpense"], "max"),
@@ -43,7 +46,7 @@ def _d(s):
 
 def compact(facts_json):
     """companyfacts 원본 → {'concepts': {tag: [[start, end, val, filed, accn]...]}, 'shares_out': [...]}"""
-    out = {"name": facts_json.get("entityName"), "concepts": {}, "shares_out": []}
+    out = {"name": facts_json.get("entityName"), "concepts": {}, "shares_out": [], "version": COMPACT_VERSION}
     gaap = facts_json.get("facts", {}).get("us-gaap", {})
     wanted = set()
     for tags, _ in list(DURATION_CONCEPTS.values()) + list(INSTANT_CONCEPTS.values()):
@@ -176,7 +179,7 @@ def build_series(compacted):
     ends = [e for e, _ in spine]
 
     series = {"end": ends, "revenue": [v for _, v in spine]}
-    for name in ["cogs", "gross_profit", "op_income", "ocf", "capex", "da"]:
+    for name in ["cogs", "gross_profit", "op_income", "ocf", "capex", "da", "net_income"]:
         qm = quarterize(dur[name])
         series[name] = [_match(qm, e) for e in ends]
     shares_q = quarterize(dur["diluted_shares"], direct_only=True)

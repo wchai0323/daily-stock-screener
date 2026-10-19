@@ -14,7 +14,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from . import config as C
-from . import facts, metrics, prices, report, screen, store
+from . import facts, metrics, prices, report, screen, sectors, store
 from .sec import SecClient
 
 
@@ -126,6 +126,7 @@ def main():
         c = {"cik": cik, "ticker": tick[cik]["ticker"], "exchange": tick[cik]["exchange"],
              "name": meta.get("name") or comp.get("name") or tick[cik].get("name"),
              "sic": meta.get("sic"), "country": meta.get("country"),
+             "sector": sectors.sector_of(meta.get("sic")), "industry": sectors.industry_of(meta.get("sic_desc")),
              "shares_out": facts.shares_outstanding(comp), "latest_filed": facts.latest_filed(comp)}
         c.update(m)
         companies.append(c)
@@ -150,13 +151,34 @@ def main():
     passed = [c for c in universe if c["pass"]]
     log(f"유니버스 {len(universe):,} → 1층 통과 {len(passed)}")
 
-    # 6) 2층 자동 점수 + 밸류에이션·분류 (Yahoo 조회는 통과 종목만)
+    # 6) 밸류에이션
+    # 순이익 태그가 없던 옛 캐시(v1)는 통과 종목만 이번에 다시 받는다 (나머지는 45일 주기 갱신 때 자연 교체)
+    upgraded = 0
+    for c in passed:
+        obj = store.load_company(c["cik"])
+        if obj and (obj["compact"].get("version") or 1) < facts.COMPACT_VERSION:
+            try:
+                obj = refresh_company(client, c["cik"], obj, today)
+                store.save_company(c["cik"], obj)
+                fetched[str(c["cik"])] = today.isoformat()
+                upgraded += 1
+            except Exception as e:  # noqa: BLE001
+                log(f"  CIK {c['cik']} 순이익 보강 실패: {e}")
+        m2 = metrics.compute(facts.build_series(obj["compact"])) if obj else None
+        c["net_income_ttm"] = (m2 or {}).get("net_income_ttm")
+    if upgraded:
+        log(f"순이익 보강 {upgraded}개")
+
+    # TTM PER·PSR은 SEC 재무로 직접 계산 (항상 채워짐). Forward PER·PEG·공매도는 Yahoo (막히면 빈칸)
     qi, yahoo_diag = prices.fetch_quote_info([c["ticker"] for c in passed])
     log(f"Yahoo 조회: {yahoo_diag}")
     for c in passed:
-        c.update(qi.get(c["ticker"]) or prices.parse_info({}))
-        rev = c.get("revenue_ttm")
-        c["psr"] = c["mkt_cap"] / rev if (c.get("mkt_cap") and rev and rev > 0) else None
+        y = qi.get(c["ticker"]) or prices.parse_info({})
+        for k in ("pe_fwd", "peg", "short_pct_float"):
+            c[k] = y.get(k)
+        cap, rev, ni = c.get("mkt_cap"), c.get("revenue_ttm"), c.get("net_income_ttm")
+        c["psr"] = cap / rev if (cap and rev and rev > 0) else None
+        c["pe_ttm"] = cap / ni if (cap and ni and ni > 0) else None
         c["entry_tags"] = screen.entry_tags(c)
     screen.score(passed)
 

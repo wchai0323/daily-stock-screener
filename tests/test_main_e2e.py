@@ -68,8 +68,9 @@ def test_two_day_run(env, monkeypatch):
     html1 = (tmp / "out" / "latest.html").read_text(encoding="utf-8")
     assert "첫 실행" in html1
     # 밸류에이션·분류가 메일과 CSV에 들어간다
-    assert "PER 31.4 / 22.0" in html1 and "PEG 1.15" in html1 and "PSR" in html1
-    assert "Technology" in html1 and "Software - Application" in html1
+    # TTM PER은 SEC 순이익으로 계산(Yahoo의 31.4는 쓰지 않음), Forward PER·PEG는 Yahoo, 섹터·업종은 SIC
+    assert "PER 31.4" not in html1 and "/ 22.0" in html1 and "PEG 1.15" in html1 and "PSR" in html1
+    assert "소프트웨어·IT서비스" in html1 and "Software" in html1 and "Technology" not in html1
     assert "pe_fwd" in res1 and "sector" in res1
 
     # 둘째 날: GOOD가 대규모 증자로 희석 → 이탈, 신규 종목 NEW 진입

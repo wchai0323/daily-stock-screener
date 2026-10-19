@@ -119,7 +119,7 @@ def _err(diag, stage, e):
     diag["errors"].setdefault(stage, {"count": 0, "first": msg})["count"] += 1
 
 
-def fetch_quote_info(tickers, pause=1.0, retries=2, passes=3, pass_wait=20):
+def fetch_quote_info(tickers, pause=1.0, retries=1, passes=2, pass_wait=15):
     """1층 통과 종목만: 공매도 비율, PER(TTM·Forward), PEG, 섹터·업종.
 
     Yahoo가 GitHub 서버 요청을 자주 막아서 세 경로를 차례로 시도한다.
