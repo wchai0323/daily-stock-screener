@@ -119,7 +119,7 @@ def _err(diag, stage, e):
     diag["errors"].setdefault(stage, {"count": 0, "first": msg})["count"] += 1
 
 
-def fetch_quote_info(tickers, pause=0.5, retries=2):
+def fetch_quote_info(tickers, pause=1.0, retries=2, passes=3, pass_wait=20):
     """1층 통과 종목만: 공매도 비율, PER(TTM·Forward), PEG, 섹터·업종.
 
     Yahoo가 GitHub 서버 요청을 자주 막아서 세 경로를 차례로 시도한다.
@@ -151,26 +151,28 @@ def fetch_quote_info(tickers, pause=0.5, retries=2):
                 time.sleep(2 * (attempt + 1))
 
     # 2) 종목별 상세 → 3) .info
-    for t in tickers:
-        if all(out[t].get(k) is not None for k in ("sector", "pe_fwd")):
-            continue
-        got = False
-        for attempt in range(retries + 1):
+    # Yahoo가 간헐적으로 401(인증 끊김)을 내므로, 비어 있는 종목만 모아 간격을 두고 여러 번 다시 돈다
+    def missing():
+        return [t for t in tickers if out[t].get("sector") is None]
+
+    for rnd in range(passes):
+        todo = missing()
+        if not todo:
+            break
+        if rnd:
+            time.sleep(pass_wait)
+        for t in todo:
             try:
                 js = data.get_raw_json(QS_URL.format(t=t), params={"modules": QS_MODULES, "formatted": "false"})
                 _merge(out[t], parse_info(parse_quote_summary(js)))
-                got = out[t].get("sector") is not None
-                break
             except Exception as e:  # noqa: BLE001
-                if attempt == retries:
-                    _err(diag, "quoteSummary", e)
-                time.sleep(2 * (attempt + 1))
-        if not got:
-            try:
-                _merge(out[t], parse_info(yf.Ticker(t).info))
-            except Exception as e:  # noqa: BLE001
-                _err(diag, "info", e)
-        time.sleep(pause)
+                _err(diag, f"quoteSummary_pass{rnd + 1}", e)
+                try:
+                    _merge(out[t], parse_info(yf.Ticker(t).info))
+                except Exception as e2:  # noqa: BLE001
+                    _err(diag, f"info_pass{rnd + 1}", e2)
+            time.sleep(pause)
+    diag["still_missing"] = missing()
 
     for k in FIELDS:
         diag[f"filled_{k}"] = sum(out[t].get(k) is not None for t in tickers)
