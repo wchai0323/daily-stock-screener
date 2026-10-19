@@ -1,0 +1,24 @@
+{
+ "run_at_utc": "2026-10-19T03:13:00+00:00",
+ "screen_date": "2026-10-18",
+ "max_companies": null,
+ "targets": 6046,
+ "refreshed": {
+  "new": 5846,
+  "recent_filers": 3,
+  "stale": 0
+ },
+ "with_financials": 6046,
+ "with_prices": 2171,
+ "universe": 1238,
+ "passed": 28,
+ "lanes": {
+  "G": 8,
+  "C": 20
+ },
+ "priority": 7,
+ "new": null,
+ "exits": null,
+ "mail": "sent",
+ "sec_requests": 8335
+}
