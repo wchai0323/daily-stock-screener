@@ -107,7 +107,7 @@ def _cand_rows(cands, holdings):
             _cap(c.get("mkt_cap")),
             _pct(c.get("rev_growth"), True),
             "–" if c.get("accel") is None else f"{c['accel'] * 100:+.0f}%p",
-            f"{_pct(c.get('gpm'))}<br><span style='color:#888'>업종 {_pct(c.get('ind_gpm_median'))}</span>",
+            (f"{_pct(c.get('gpm'))}<br>" if c.get('gpm') is not None else "미공시<br>") + f"<span style='color:#888'>업종 {_pct(c.get('ind_gpm_median'))}</span>",
             _pct(c.get("opm"), True),
             _pct(c.get("dilution"), True, 1),
             _e(", ".join(c.get("entry_tags") or [])) or "–",
@@ -170,7 +170,7 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
             parts.append("<p style='font-size:12px;color:#666'>없음</p>")
 
     parts.append(f"<h2 {H2}>자동점수 상위 {min(C.TOP_N, len(passed))}</h2>")
-    parts.append("<p style='margin:2px 0;font-size:11px;color:#666'>★ = 1순위 후보. 업종 = 같은 업종(SIC) 매출총이익률 중앙값. "
+    parts.append("<p style='margin:2px 0;font-size:11px;color:#666'>★ = 1순위 후보. 업종 = 같은 업종(SIC) 매출총이익률 40백분위(G 차선 흑자 기준선). "
                  "진입 참고는 점수가 아닌 분할매수 속도 참고용.</p>")
     parts.append(_table(CAND_HEAD, _cand_rows(passed[:C.TOP_N], holdings)))
     parts.append("<p style='font-size:11px;color:#777'>전체 통과 종목과 항목별 점수는 첨부 CSV에 있습니다. "

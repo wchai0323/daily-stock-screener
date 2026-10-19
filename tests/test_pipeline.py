@@ -215,3 +215,40 @@ Form Type   Company Name                                                  CIK   
 """
     rows = sec.parse_form_index(text)
     assert [(r["form"], r["cik"]) for r in rows] == [("10-K/A", 1234567), ("10-Q", 320193), ("8-K", 99999)]
+
+
+def test_no_gross_margin_disclosed_uses_operating_margin():
+    """매출원가 미공시 기업: 매출총이익률 조건을 건너뛰고 영업이익률 추세로 G 차선 판정."""
+    nogp = _company("NOGP", make_facts(REV, gpm=0.6), gpm=None, gpm_prev=None, gp_growth=None)
+    worse = _company("WRS", make_facts(REV, gpm=0.6), gpm=None, gpm_prev=None, gp_growth=None,
+                     opm_change=-0.03)
+    screen.run([nogp, worse] + _peers())
+    assert nogp["pass"] and nogp["lane"] == "G", nogp["fail"]
+    # 영업이익률이 악화되면 G 차선은 탈락 (현금흐름이 좋으면 C 차선으로는 통과 가능)
+    assert worse["lane"] != "G"
+
+
+def test_c_lane_excludes_commodities_and_large_caps():
+    """C 차선: 원자재 업종(SIC 1311 석유가스 채굴)과 시총 100억 달러 초과는 제외."""
+    energy = _company("OIL", make_facts(REV, gpm=0.30), sic=1311)
+    flat = [100e6 * (1.01 ** i) for i in range(10)]
+    energy_peers = [_company(f"E{i}", make_facts(flat, gpm=0.40), sic=1311) for i in range(10)]
+    large = _company("LRG", make_facts(REV, gpm=0.30), cap=12e9)
+    ok = _company("OKC", make_facts(REV, gpm=0.30))
+    screen.run([energy, large, ok] + _peers() + energy_peers)
+    assert ok["pass"] and ok["lane"] == "C", ok["fail"]
+    assert not energy["pass"] and any("원자재" in r for r in energy["fail"])
+    assert not large["pass"] and any("100억" in r for r in large["fail"])
+
+
+def test_tiny_base_revenue_growth_rejected():
+    """1년 전 매출이 2,500만 달러 미만이면 성장률을 믿지 않는다 (기저 효과)."""
+    tiny = [1e6] * 6 + [3e6, 8e6, 15e6, 30e6]   # 1년 전 TTM 400만 → 현재 5,600만 달러
+    c = _company("TINY", make_facts(tiny, gpm=0.8))
+    screen.run([c] + _peers())
+    assert not c["pass"] and any("기저 매출" in r for r in c["fail"]), c["fail"]
+
+
+def test_cyclical_tag_in_g_lane():
+    ship = _company("SHIP", make_facts(REV, gpm=0.6), sic=4412)
+    assert "경기 민감 업종" in screen.entry_tags(ship)

@@ -71,10 +71,10 @@ def _industry_groups(rows):
 
 
 def _group_stats(rows, key):
-    """그룹별 지표 분포: 중앙값, 70백분위, 그룹 내 백분위."""
+    """그룹별 지표 분포: 40백분위(흑자 G 기준), 70백분위(적자 G 기준), 그룹 내 백분위."""
     df = pd.DataFrame({"g": [c["ind_group"] for c in rows], "v": [c.get(key) for c in rows]})
     df["v"] = pd.to_numeric(df["v"], errors="coerce")
-    med = df.groupby("g")["v"].median().to_dict()
+    med = df.groupby("g")["v"].quantile(C.G_GPM_PROFITABLE_PCTL).to_dict()
     p70 = df.groupby("g")["v"].quantile(C.G_GPM_UNPROFITABLE_PCTL).to_dict()
     pct = df.groupby("g")["v"].rank(pct=True).tolist()
     return med, p70, pct
@@ -112,11 +112,15 @@ def hard_filter(c):
             reasons.append("H5 적자 + 마진 개선 부족")
 
     # H6 투자 효율: 영업자산 증가율 <= 매출총이익 증가율
+    # 매출총이익이 없는 기업(매출원가 미공시)은 매출 증가율로 대신 비교
     oa, gpg = g("op_asset_growth"), g("gp_growth")
+    label = "매출총이익"
+    if gpg is None and g("gpm") is None:
+        gpg, label = g("rev_growth"), "매출"
     if oa is None or gpg is None:
         reasons.append("H6 판정 불가")
     elif oa > gpg:
-        reasons.append(f"H6 자산 증가({oa:+.0%}) > 매출총이익 증가({gpg:+.0%})")
+        reasons.append(f"H6 자산 증가({oa:+.0%}) > {label} 증가({gpg:+.0%})")
 
     # H4 성장 차선
     lane, lane_reasons = _lane(c)
@@ -125,10 +129,20 @@ def hard_filter(c):
     return (not reasons), lane, reasons
 
 
+def is_cyclical(c):
+    sic = c.get("sic")
+    return sic is not None and any(lo <= sic <= hi for lo, hi in C.C_EXCLUDED_SIC_RANGES)
+
+
 def _lane(c):
     g = lambda k: c.get(k)
     rg, gpm = g("rev_growth"), g("gpm")
     why_g, why_c = [], []
+
+    # 기저 효과: 1년 전 매출이 너무 작으면 두 차선 모두 성장률 조건 불충족
+    rev = g("revenue_ttm")
+    if rg is not None and rev is not None and rev / (1 + rg) < C.PRIOR_REVENUE_MIN:
+        return None, [f"H4 기저 매출 너무 작음 (1년 전 TTM ${rev / (1 + rg) / 1e6:.0f}M, 성장률 왜곡)"]
 
     # G 차선
     if rg is None or rg < C.G_REV_GROWTH_MIN:
@@ -136,7 +150,9 @@ def _lane(c):
     if g("accel") is None or g("accel") <= C.G_ACCEL_FLOOR:
         why_g.append("성장 급감속")
     if gpm is None:
-        why_g.append("매출총이익률 없음")
+        # 매출원가 미공시: 매출총이익률 조건 대신 영업이익률이 악화되지 않았는지 확인
+        if g("opm_change") is None or g("opm_change") < C.G_NO_GPM_OPM_CHANGE_MIN:
+            why_g.append("매출총이익률 미공시 + 영업이익률 악화")
     else:
         if g("profitable"):
             floor = max(C.G_GPM_FLOOR_PROFITABLE, g("ind_gpm_median") or 0)
@@ -156,8 +172,12 @@ def _lane(c):
         why_c.append("FCF 수익률 상위 30% 밖")
     if not g("profitable"):
         why_c.append("영업적자")
-    if gpm is None or gpm < C.C_GPM_FLOOR:
+    if gpm is not None and gpm < C.C_GPM_FLOOR:   # 미공시는 영업흑자 조건으로 갈음
         why_c.append("매출총이익률 20% 미만")
+    if (g("mkt_cap") or 0) > C.C_MKT_CAP_MAX:
+        why_c.append("시총 100억 달러 초과")
+    if is_cyclical(c):
+        why_c.append("경기 민감 원자재·해운 업종")
     if not why_c:
         return "C", []
     return None, ["H4 G 미충족(" + ", ".join(why_g) + ")", "H4 C 미충족(" + ", ".join(why_c) + ")"]
@@ -264,8 +284,12 @@ def run(companies):
 
 
 def entry_tags(c):
-    """3단계 진입 속도 참고 정보 (점수 아님)."""
+    """3단계 진입 속도 참고 정보와 주의 표시 (점수 아님)."""
     tags = []
+    if is_cyclical(c):
+        tags.append("경기 민감 업종")
+    if c.get("gpm") is None:
+        tags.append("매출총이익률 미공시")
     p, hi, lo, ma = c.get("price"), c.get("hi52"), c.get("lo52"), c.get("ma200")
     if p and hi and lo and hi > lo:
         c["range_pos"] = (p - lo) / (hi - lo)
