@@ -1,11 +1,11 @@
 {
- "run_at_utc": "2026-10-19T06:35:40+00:00",
+ "run_at_utc": "2026-10-19T06:42:22+00:00",
  "screen_date": "2026-10-19",
  "max_companies": null,
  "targets": 6047,
  "refreshed": {
-  "new": 4,
-  "recent_filers": 14,
+  "new": 0,
+  "recent_filers": 7,
   "stale": 0
  },
  "with_financials": 6047,
@@ -20,5 +20,5 @@
  "new": 10,
  "exits": 7,
  "mail": "sent",
- "sec_requests": 25
+ "sec_requests": 12
 }
