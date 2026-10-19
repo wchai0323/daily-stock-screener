@@ -54,17 +54,39 @@ def fetch_prices(tickers, chunk_size=150, pause=1.0):
     return out
 
 
-def fetch_short_interest(tickers, pause=0.4):
-    """1층 통과 종목만 대상으로 공매도/유통주식 비율을 가져온다 (종목당 1회 호출)."""
+def _num(v):
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f == f and f not in (float("inf"), float("-inf")) else None
+
+
+def parse_info(info):
+    """yfinance .info → 메일·점수에 쓰는 필드만. 값이 없거나 이상하면 None."""
+    info = info or {}
+    peg = _num(info.get("trailingPegRatio"))
+    if peg is None:
+        peg = _num(info.get("pegRatio"))
+    return {
+        "short_pct_float": _num(info.get("shortPercentOfFloat")),
+        "pe_ttm": _num(info.get("trailingPE")),
+        "pe_fwd": _num(info.get("forwardPE")),
+        "peg": peg,
+        "sector": info.get("sector") or None,
+        "industry": info.get("industry") or None,
+    }
+
+
+def fetch_quote_info(tickers, pause=0.4):
+    """1층 통과 종목만: 공매도 비율, PER(TTM·Forward), PEG, 섹터·업종 (종목당 1회 호출)."""
     import yfinance as yf
 
     out = {}
     for t in tickers:
         try:
-            info = yf.Ticker(t).info or {}
-            v = info.get("shortPercentOfFloat")
-            out[t] = float(v) if v is not None else None
-        except Exception:  # noqa: BLE001
-            out[t] = None
+            out[t] = parse_info(yf.Ticker(t).info)
+        except Exception:  # noqa: BLE001 - 조회 실패는 빈 값으로
+            out[t] = parse_info({})
         time.sleep(pause)
     return out

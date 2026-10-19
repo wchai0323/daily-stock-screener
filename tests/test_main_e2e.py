@@ -42,7 +42,10 @@ def _install_fakes(monkeypatch, main, universe):
     monkeypatch.setattr(main, "SecClient", FakeClient)
     px = {"price": 20.0, "price_date": "2026-10-16", "adv20": 20e6, "hi52": 30, "lo52": 10, "ma200": 18}
     monkeypatch.setattr(main.prices, "fetch_prices", lambda tickers: {t: dict(px) for t in tickers})
-    monkeypatch.setattr(main.prices, "fetch_short_interest", lambda tickers: {t: 0.03 for t in tickers})
+    info = {"shortPercentOfFloat": 0.03, "trailingPE": 31.4, "forwardPE": 22.0, "trailingPegRatio": 1.15,
+            "sector": "Technology", "industry": "Software - Application"}
+    monkeypatch.setattr(main.prices, "fetch_quote_info",
+                        lambda tickers: {t: main.prices.parse_info(info) for t in tickers})
 
 
 def test_two_day_run(env, monkeypatch):
@@ -64,6 +67,10 @@ def test_two_day_run(env, monkeypatch):
     assert "GOOD" in res1
     html1 = (tmp / "out" / "latest.html").read_text(encoding="utf-8")
     assert "첫 실행" in html1
+    # 밸류에이션·분류가 메일과 CSV에 들어간다
+    assert "PER 31.4 / 22.0" in html1 and "PEG 1.15" in html1 and "PSR" in html1
+    assert "Technology" in html1 and "Software - Application" in html1
+    assert "pe_fwd" in res1 and "sector" in res1
 
     # 둘째 날: GOOD가 대규모 증자로 희석 → 이탈, 신규 종목 NEW 진입
     universe[1] = ("GOOD", make_facts(REV, gpm=0.6, shares_q=[100e6] * 9 + [130e6]))

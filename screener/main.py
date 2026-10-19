@@ -150,10 +150,12 @@ def main():
     passed = [c for c in universe if c["pass"]]
     log(f"유니버스 {len(universe):,} → 1층 통과 {len(passed)}")
 
-    # 6) 2층 자동 점수 (공매도 비율은 통과 종목만 조회)
-    si = prices.fetch_short_interest([c["ticker"] for c in passed])
+    # 6) 2층 자동 점수 + 밸류에이션·분류 (Yahoo 조회는 통과 종목만)
+    qi = prices.fetch_quote_info([c["ticker"] for c in passed])
     for c in passed:
-        c["short_pct_float"] = si.get(c["ticker"])
+        c.update(qi.get(c["ticker"]) or prices.parse_info({}))
+        rev = c.get("revenue_ttm")
+        c["psr"] = c["mkt_cap"] / rev if (c.get("mkt_cap") and rev and rev > 0) else None
         c["entry_tags"] = screen.entry_tags(c)
     screen.score(passed)
 

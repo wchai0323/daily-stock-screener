@@ -252,3 +252,11 @@ def test_tiny_base_revenue_growth_rejected():
 def test_cyclical_tag_in_g_lane():
     ship = _company("SHIP", make_facts(REV, gpm=0.6), sic=4412)
     assert "경기 민감 업종" in screen.entry_tags(ship)
+
+
+def test_parse_info_and_valuation_cell():
+    from screener import prices, report
+    v = prices.parse_info({"trailingPE": None, "forwardPE": "Infinity", "pegRatio": 2.3, "sector": ""})
+    assert v["pe_ttm"] is None and v["pe_fwd"] is None and v["peg"] == 2.3 and v["sector"] is None
+    cell = report._valuation({"pe_ttm": None, "pe_fwd": 40.0, "peg": None, "psr": 6.25, "opm": -0.1})
+    assert "PER 적자 / 40.0" in cell and "PSR 6.2" in cell

@@ -7,7 +7,8 @@ import pandas as pd
 from . import config as C
 
 RESULT_COLS = [
-    "ticker", "name", "lane", "auto_score", "auto_score_pct", "priority", "mkt_cap", "rev_growth", "q_yoy",
+    "ticker", "name", "sector", "industry", "lane", "auto_score", "auto_score_pct", "priority", "mkt_cap",
+    "pe_ttm", "pe_fwd", "peg", "psr", "rev_growth", "q_yoy",
     "accel", "gpm", "ind_gpm_median", "opm", "opm_change", "fcf_margin", "fcf_yield", "dilution",
     "net_debt_ebitda", "runway_months", "rule_of_40", "short_pct_float", "price", "range_pos", "ma200_gap",
     "entry_tags", "period_end", "latest_filed", "ind_group", "sic",
@@ -70,6 +71,29 @@ def _e(s):
     return html.escape(str(s if s is not None else ""))
 
 
+def _x(v, digits=1):
+    """배수 표시 (PER·PEG·PSR). 없으면 –, 음수·비정상 값도 –."""
+    if v is None or (isinstance(v, float) and (math.isnan(v) or math.isinf(v))) or v <= 0:
+        return "–"
+    return f"{v:,.0f}" if v >= 100 else f"{v:.{digits}f}"
+
+
+def _valuation(c):
+    """PER TTM / Fwd, PEG, PSR를 한 칸에. TTM PER이 없고 영업적자면 '적자'."""
+    pe_ttm = _x(c.get("pe_ttm"))
+    if pe_ttm == "–" and (c.get("opm") is not None and c["opm"] < 0):
+        pe_ttm = "적자"
+    return (f"PER {pe_ttm} / {_x(c.get('pe_fwd'))}<br>"
+            f"<span style='color:#666'>PEG {_x(c.get('peg'), 2)} · PSR {_x(c.get('psr'))}</span>")
+
+
+def _class(c):
+    sec, ind = c.get("sector"), c.get("industry")
+    if not sec and not ind:
+        return "–"
+    return f"{_e(sec or '–')}<br><span style='color:#666'>{_e(ind or '')}</span>"
+
+
 TABLE = ('style="border-collapse:collapse;width:100%;font-size:12px;margin:6px 0 18px;'
          'font-family:Malgun Gothic,Apple SD Gothic Neo,Arial,sans-serif"')
 TH = 'style="background:#DCE3EE;border:1px solid #B8C2D1;padding:5px 6px;text-align:left;white-space:nowrap"'
@@ -102,9 +126,11 @@ def _cand_rows(cands, holdings):
         held = " (보유)" if c["ticker"] in holdings else ""
         rows.append([
             f"<b>{star}{_e(c['ticker'])}</b>{held}<br><span style='color:#666'>{_e((c.get('name') or '')[:28])}</span>",
+            _class(c),
             _e(c["lane"]),
             f"<b>{c.get('auto_score', 0):.0f}</b>/{C.AUTO_SCORE_MAX}",
             _cap(c.get("mkt_cap")),
+            _valuation(c),
             _pct(c.get("rev_growth"), True),
             "–" if c.get("accel") is None else f"{c['accel'] * 100:+.0f}%p",
             (f"{_pct(c.get('gpm'))}<br>" if c.get('gpm') is not None else "미공시<br>") + f"<span style='color:#888'>업종 {_pct(c.get('ind_gpm_median'))}</span>",
@@ -115,7 +141,8 @@ def _cand_rows(cands, holdings):
     return rows
 
 
-CAND_HEAD = ["종목", "차선", "자동점수", "시총", "매출 YoY", "가속", "매출총이익률", "영업이익률", "희석", "진입 참고"]
+CAND_HEAD = ["종목", "섹터 / 업종", "차선", "자동점수", "시총", "PER TTM/Fwd · PEG · PSR", "매출 YoY", "가속",
+             "매출총이익률", "영업이익률", "희석", "진입 참고"]
 
 
 def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
