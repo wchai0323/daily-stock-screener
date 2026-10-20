@@ -1,0 +1,84 @@
+name: Korea Stock Screener
+
+on:
+  schedule:
+    # 한국 장 마감 후 실행: UTC 07:30 (월~금) = 한국시간 16:30
+    - cron: "30 7 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      max_companies:
+        description: "시험 실행용 기업 수 제한 (비우면 전체)"
+        required: false
+        default: ""
+      skip_mail:
+        description: "메일 발송 생략"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: screener          # 미국 실행과 같은 그룹: 결과 커밋이 겹치지 않게 순서대로 실행
+  cancel-in-progress: false
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: DART 재무 캐시 복원
+        uses: actions/cache/restore@v4
+        with:
+          path: data/kr/cache
+          key: dart-cache-${{ github.run_id }}
+          restore-keys: dart-cache-
+
+      - name: 한국 스크리닝 실행
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          MAX_COMPANIES: ${{ inputs.max_companies }}
+          SKIP_MAIL: ${{ inputs.skip_mail && '1' || '' }}
+        run: python -m screener.kr_main
+
+      - name: DART 재무 캐시 저장 (실패해도 진행분 보존)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/kr/cache
+          key: dart-cache-${{ github.run_id }}
+
+      - name: 결과 기록 커밋
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/kr/results data/kr/snapshots data/kr/last_run.json
+          if ! git diff --cached --quiet; then
+            git commit -m "screen-kr: $(TZ=Asia/Seoul date +%F)"
+            git pull --rebase
+            git push
+          fi
+
+      - name: 메일 본문 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kr-screener-mail-${{ github.run_id }}
+          path: data/kr/out/latest.html
+          if-no-files-found: ignore
+          retention-days: 14

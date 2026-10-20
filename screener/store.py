@@ -96,8 +96,8 @@ def load_snapshot(day_str):
     return pd.read_csv(path) if path.exists() else None
 
 
-def load_holdings():
-    p = Path(__file__).resolve().parent.parent / "config" / "holdings.txt"
+def load_holdings(filename="holdings.txt"):
+    p = Path(__file__).resolve().parent.parent / "config" / filename
     if not p.exists():
         return set()
     out = set()

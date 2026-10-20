@@ -199,7 +199,7 @@ def main():
     out = Path(store.ROOT) / "out"
     out.mkdir(parents=True, exist_ok=True)
     (out / "latest.html").write_text(html_body, encoding="utf-8")
-    subject = f"[스크리너] {today} · 통과 {len(passed)}"
+    subject = f"{screen.M.SUBJECT} {today} · 통과 {len(passed)}"
     if new is not None:
         subject += f" · 신규 {len(new)} · 이탈 {len(exits)}"
     if os.environ.get("SKIP_MAIL") == "1":

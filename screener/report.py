@@ -4,7 +4,6 @@ import math
 
 import pandas as pd
 
-from . import config as C
 
 RESULT_COLS = [
     "ticker", "name", "sector", "industry", "lane", "auto_score", "auto_score_pct", "priority", "mkt_cap",
@@ -140,7 +139,14 @@ def _pct(v, signed=False, digits=0):
     return f"{v:+.{digits}%}" if signed else f"{v:.{digits}%}"
 
 
+def _M():
+    from . import screen
+    return screen.M
+
+
 def _cap(v):
+    if v:
+        return _M().fmt_money(v)
     if not v:
         return "–"
     return f"${v / 1e9:.1f}B" if v >= 1e9 else f"${v / 1e6:.0f}M"
@@ -219,7 +225,7 @@ def _cand_rows(cands, holdings):
             f"<b>{star}{_e(c['ticker'])}</b>{held}<br><span style='color:#666'>{_e((c.get('name') or '')[:28])}</span>",
             _class(c),
             _e(c["lane"]),
-            f"<b>{c.get('auto_score', 0):.0f}</b>/{C.AUTO_SCORE_MAX}",
+            f"<b>{c.get('auto_score', 0):.0f}</b>/{_M().AUTO_SCORE_MAX}",
             _cap(c.get("mkt_cap")),
             _valuation(c),
             _pct(c.get("rev_growth"), True),
@@ -240,12 +246,12 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
     passed = sorted(passed, key=lambda c: -(c.get("auto_score") or 0))
     by_ticker = {c["ticker"]: c for c in all_today}
     parts = [f"<div style='font-family:Malgun Gothic,Apple SD Gothic Neo,Arial,sans-serif;color:#222;max-width:960px'>"]
-    parts.append(f"<h1 style='font-size:20px;color:#1F3864;margin:0'>일일 주식 스크리너 · {day}</h1>")
+    parts.append(f"<h1 style='font-size:20px;color:#1F3864;margin:0'>{_M().TITLE} · {day}</h1>")
     n_g = sum(1 for c in passed if c["lane"] == "G")
     n_c = len(passed) - n_g
     n_pri = sum(1 for c in passed if c.get("priority"))
     line = (f"유니버스 {stats['universe']:,}개 중 <b>{len(passed)}개 통과</b> (G {n_g} · C {n_c}), "
-            f"1순위 후보(자동점수 {C.PRIORITY_SCORE_PCT:.0%} 이상) <b>{n_pri}개</b>.")
+            f"1순위 후보(자동점수 {_M().PRIORITY_SCORE_PCT:.0%} 이상) <b>{n_pri}개</b>.")
     if new is not None:
         line += f" 전일({prev_day}) 대비 신규 <b>{len(new)}</b> · 이탈 <b>{len(exits)}</b>"
         cc = cause_counts(new, exits)
@@ -256,8 +262,8 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
         line += " 첫 실행이라 전일 비교가 없습니다."
     parts.append(f"<p style='margin:6px 0 2px'>{line}</p>")
     parts.append(f"<p style='margin:0;color:#777;font-size:11px'>오늘 재무 갱신 {stats['refreshed']}개 기업 · "
-                 f"재무는 SEC 10-Q/10-K 공시 기준이라 실적 발표 후 공시까지 며칠~수주 늦을 수 있음 · "
-                 f"자동점수는 2층 100점 중 자동 계산 가능한 {C.AUTO_SCORE_MAX}점 기준</p>")
+                 f"{_M().SOURCE_NOTE} · "
+                 f"자동점수는 2층 100점 중 자동 계산 가능한 {_M().AUTO_SCORE_MAX}점 기준</p>")
 
     # 보유 종목 경고
     held_alerts = []
@@ -279,8 +285,8 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
         if new:
             rows = [[f"<b>{_e(c['ticker'])}</b> {_e((c.get('name') or '')[:28])}",
                      _cause_badge(c.get("change_cause")),
-                     f"{c.get('auto_score', 0):.0f}/{C.AUTO_SCORE_MAX}", _e(_summary_line(c))]
-                    for c in sorted(new, key=lambda c: -(c.get('auto_score') or 0))[:C.MAX_ROWS_PER_SECTION]]
+                     f"{c.get('auto_score', 0):.0f}/{_M().AUTO_SCORE_MAX}", _e(_summary_line(c))]
+                    for c in sorted(new, key=lambda c: -(c.get('auto_score') or 0))[:_M().MAX_ROWS_PER_SECTION]]
             parts.append(_table(["종목", "변동 원인", "자동점수", "진입 근거"], rows))
         else:
             parts.append("<p style='font-size:12px;color:#666'>없음</p>")
@@ -288,17 +294,18 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
         if exits:
             rows = [[f"<b>{_e(x['ticker'])}</b>" + (" <span style='color:#C00000'>(보유)</span>" if x["ticker"] in holdings else ""),
                      _e(x["name"][:28]), _cause_badge(x.get("cause")), _e("; ".join(x["reasons"]))]
-                    for x in exits[:C.MAX_ROWS_PER_SECTION]]
+                    for x in exits[:_M().MAX_ROWS_PER_SECTION]]
             parts.append(_table(["종목", "이름", "변동 원인", "걸린 조건"], rows))
         else:
             parts.append("<p style='font-size:12px;color:#666'>없음</p>")
 
-    parts.append(f"<h2 {H2}>자동점수 상위 {min(C.TOP_N, len(passed))}</h2>")
-    parts.append("<p style='margin:2px 0;font-size:11px;color:#666'>★ = 1순위 후보. 업종 = 같은 업종(SIC) 매출총이익률 40백분위(G 차선 흑자 기준선). "
-                 "진입 참고는 점수가 아닌 분할매수 속도 참고용. TTM PER·PSR은 SEC 재무로 계산, "
-                 "Forward PER·PEG는 Yahoo 컨센서스(조회 실패 시 –). 섹터·업종은 SEC 업종 분류(SIC).</p>")
-    parts.append(_table(CAND_HEAD, _cand_rows(passed[:C.TOP_N], holdings)))
+    parts.append(f"<h2 {H2}>자동점수 상위 {min(_M().TOP_N, len(passed))}</h2>")
+    parts.append(f"<p style='margin:2px 0;font-size:11px;color:#666'>★ = 1순위 후보. 업종 = {_M().INDUSTRY_LABEL} "
+                 f"매출총이익률 40백분위(G 차선 흑자 기준선). 진입 참고는 점수가 아닌 분할매수 속도 참고용. "
+                 f"{_e(_M().VALUATION_NOTE)}</p>")
+    parts.append(_table(CAND_HEAD, _cand_rows(passed[:_M().TOP_N], holdings)))
     parts.append("<p style='font-size:11px;color:#777'>전체 통과 종목과 항목별 점수는 첨부 CSV에 있습니다. "
-                 "남은 2층 31점(잔고·역DCF·TAM·경영진·내부자·가이던스·기관)과 3·4층은 체크리스트 검증 단계에서 채웁니다.</p>")
+                 f"남은 2층 {100 - _M().AUTO_SCORE_MAX}점(잔고·역DCF·TAM·경영진·내부자·가이던스·기관"
+                 f"{'' if _M().USE_SHORT else '·공매도'})과 3·4층은 체크리스트 검증 단계에서 채웁니다.</p>")
     parts.append("</div>")
     return "".join(parts)

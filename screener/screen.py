@@ -6,15 +6,19 @@ import math
 
 import pandas as pd
 
-from . import config as C
+from . import markets
+
+# 현재 시장 프로필. 미국이 기본이고, 한국 실행은 use(markets.korea())로 바꾼다
+M = markets.US
 
 
-def _excluded_sic(sic):
-    if sic is None:
-        return False
-    if sic in C.EXCLUDED_SIC_CODES:
-        return True
-    return any(lo <= sic <= hi for lo, hi in C.EXCLUDED_SIC_RANGES)
+def use(market):
+    global M
+    M = market
+
+
+def _excluded_sic(sic):   # 미국 main의 사전 필터용 (하위 호환)
+    return markets._us_excluded_sic(sic)
 
 
 def _pct_rank(values):
@@ -25,47 +29,40 @@ def _pct_rank(values):
 
 def universe_reasons(c):
     """0단계 탈락 사유 목록 (빈 목록이면 통과)."""
-    r = []
-    if c.get("exchange") not in C.EXCHANGES:
-        r.append("거래소")
-    if _excluded_sic(c.get("sic")):
-        r.append("금융·REIT·SPAC 업종")
-    if c.get("country") in C.CHINA_LOCATION_CODES:
-        r.append("H7 중국 연관(본사 주소)")
-    if c.get("quarters", 0) < C.MIN_QUARTERS:
+    r = list(M.universe_extra(c))
+    if c.get("quarters", 0) < M.MIN_QUARTERS:
         r.append("분기 데이터 8개 미만")
     rev = c.get("revenue_ttm")
-    if rev is None or rev < C.REVENUE_TTM_MIN:
-        r.append("H3 매출 5천만 달러 미만")
+    if rev is None or rev < M.REVENUE_TTM_MIN:
+        r.append(f"H3 매출 {M.fmt_money(M.REVENUE_TTM_MIN)} 미만")
     cap = c.get("mkt_cap")
     if cap is None:
         r.append("시가총액 확인 불가")
-    elif cap < C.MKT_CAP_MIN:
-        r.append("시가총액 3억 달러 미만")
-    elif cap > C.MKT_CAP_MAX:
-        r.append("H3 시가총액 200억 달러 초과")
-    if (c.get("adv20") or 0) < C.ADV20_MIN:
+    elif cap < M.MKT_CAP_MIN:
+        r.append(f"시가총액 {M.fmt_money(M.MKT_CAP_MIN)} 미만")
+    elif cap > M.MKT_CAP_MAX:
+        r.append(f"H3 시가총액 {M.fmt_money(M.MKT_CAP_MAX)} 초과")
+    if (c.get("adv20") or 0) < M.ADV20_MIN:
         r.append("거래대금 부족")
-    if (c.get("price") or 0) < C.PRICE_MIN:
-        r.append("주가 3달러 미만")
+    if (c.get("price") or 0) < M.PRICE_MIN:
+        r.append(f"주가 {M.PRICE_LABEL} 미만")
     return r
 
 
 def _industry_groups(rows):
-    """SIC 3자리 → 2자리 → 전체 순으로 표본이 8개 이상인 비교 그룹을 정한다."""
-    cnt3, cnt2 = {}, {}
-    for c in rows:
-        sic = c.get("sic")
-        if sic is None:
-            continue
-        cnt3[sic // 10] = cnt3.get(sic // 10, 0) + 1
-        cnt2[sic // 100] = cnt2.get(sic // 100, 0) + 1
-    for c in rows:
-        sic = c.get("sic")
-        if sic is not None and cnt3.get(sic // 10, 0) >= C.INDUSTRY_MIN_PEERS:
-            c["ind_group"] = f"SIC{sic // 10:03d}"
-        elif sic is not None and cnt2.get(sic // 100, 0) >= C.INDUSTRY_MIN_PEERS:
-            c["ind_group"] = f"SIC{sic // 100:02d}"
+    """세부 업종 → 큰 업종 → 전체 순으로 표본이 8개 이상인 비교 그룹을 정한다 (미국 SIC, 한국 KSIC)."""
+    keys = [M.industry_keys(c) for c in rows]
+    cnt_f, cnt_c = {}, {}
+    for fine, coarse in keys:
+        if fine:
+            cnt_f[fine] = cnt_f.get(fine, 0) + 1
+        if coarse:
+            cnt_c[coarse] = cnt_c.get(coarse, 0) + 1
+    for c, (fine, coarse) in zip(rows, keys):
+        if fine and cnt_f.get(fine, 0) >= M.INDUSTRY_MIN_PEERS:
+            c["ind_group"] = fine
+        elif coarse and cnt_c.get(coarse, 0) >= M.INDUSTRY_MIN_PEERS:
+            c["ind_group"] = coarse
         else:
             c["ind_group"] = "ALL"
 
@@ -74,8 +71,8 @@ def _group_stats(rows, key):
     """그룹별 지표 분포: 40백분위(흑자 G 기준), 70백분위(적자 G 기준), 그룹 내 백분위."""
     df = pd.DataFrame({"g": [c["ind_group"] for c in rows], "v": [c.get(key) for c in rows]})
     df["v"] = pd.to_numeric(df["v"], errors="coerce")
-    med = df.groupby("g")["v"].quantile(C.G_GPM_PROFITABLE_PCTL).to_dict()
-    p70 = df.groupby("g")["v"].quantile(C.G_GPM_UNPROFITABLE_PCTL).to_dict()
+    med = df.groupby("g")["v"].quantile(M.G_GPM_PROFITABLE_PCTL).to_dict()
+    p70 = df.groupby("g")["v"].quantile(M.G_GPM_UNPROFITABLE_PCTL).to_dict()
     pct = df.groupby("g")["v"].rank(pct=True).tolist()
     return med, p70, pct
 
@@ -88,7 +85,7 @@ def hard_filter(c):
     # H1 희석
     if g("dilution") is None:
         reasons.append("H1 희석 데이터 없음")
-    elif g("dilution") > C.H1_DILUTION_MAX:
+    elif g("dilution") > M.H1_DILUTION_MAX:
         reasons.append(f"H1 희석 {g('dilution'):+.1%}")
 
     # H2 재무 생존력
@@ -96,19 +93,19 @@ def hard_filter(c):
         nde = g("net_debt_ebitda")
         if g("net_debt") is not None and g("net_debt") <= 0:
             pass  # 순현금
-        elif nde is None or nde > C.H2_NET_DEBT_EBITDA_MAX:
+        elif nde is None or nde > M.H2_NET_DEBT_EBITDA_MAX:
             reasons.append("H2 순부채/EBITDA 2배 초과" if nde is not None else "H2 부채 판정 불가")
     else:
         runway = g("runway_months")
         if runway is None:
             reasons.append("H2 런웨이 판정 불가")
-        elif runway < C.H2_RUNWAY_MONTHS_MIN:
+        elif runway < M.H2_RUNWAY_MONTHS_MIN:
             reasons.append(f"H2 런웨이 {runway:.0f}개월")
 
     # H5 블랙홀: 적자면 영업이익률 1년 +5%p 이상 개선
     if not g("profitable"):
         ch = g("opm_change")
-        if ch is None or ch < C.H5_OPM_IMPROVEMENT_MIN:
+        if ch is None or ch < M.H5_OPM_IMPROVEMENT_MIN:
             reasons.append("H5 적자 + 마진 개선 부족")
 
     # H6 투자 효율: 영업자산 증가율 <= 매출총이익 증가율
@@ -121,6 +118,9 @@ def hard_filter(c):
         reasons.append("H6 판정 불가")
     elif oa > gpg:
         reasons.append(f"H6 자산 증가({oa:+.0%}) > {label} 증가({gpg:+.0%})")
+
+    # 시장 고유 위험 필터 (한국: 메자닌 잔액, 관리종목 등)
+    reasons.extend(M.extra_hard(c))
 
     # H4 성장 차선
     lane, lane_reasons = _lane(c)
@@ -137,8 +137,7 @@ def market_cap_shares(cover_shares, diluted_shares):
 
 
 def is_cyclical(c):
-    sic = c.get("sic")
-    return sic is not None and any(lo <= sic <= hi for lo, hi in C.C_EXCLUDED_SIC_RANGES)
+    return M.is_cyclical(c)
 
 
 def _lane(c):
@@ -148,41 +147,41 @@ def _lane(c):
 
     # 기저 효과: 1년 전 매출이 너무 작으면 두 차선 모두 성장률 조건 불충족
     rev = g("revenue_ttm")
-    if rg is not None and rev is not None and rev / (1 + rg) < C.PRIOR_REVENUE_MIN:
-        return None, [f"H4 기저 매출 너무 작음 (1년 전 TTM ${rev / (1 + rg) / 1e6:.0f}M, 성장률 왜곡)"]
+    if rg is not None and rev is not None and rev / (1 + rg) < M.PRIOR_REVENUE_MIN:
+        return None, [f"H4 기저 매출 너무 작음 (1년 전 TTM {M.fmt_money(rev / (1 + rg))}, 성장률 왜곡)"]
 
     # G 차선
-    if rg is None or rg < C.G_REV_GROWTH_MIN:
+    if rg is None or rg < M.G_REV_GROWTH_MIN:
         why_g.append("성장 25% 미만")
-    if g("accel") is None or g("accel") <= C.G_ACCEL_FLOOR:
+    if g("accel") is None or g("accel") <= M.G_ACCEL_FLOOR:
         why_g.append("성장 급감속")
     if gpm is None:
         # 매출원가 미공시: 매출총이익률 조건 대신 영업이익률이 악화되지 않았는지 확인
-        if g("opm_change") is None or g("opm_change") < C.G_NO_GPM_OPM_CHANGE_MIN:
+        if g("opm_change") is None or g("opm_change") < M.G_NO_GPM_OPM_CHANGE_MIN:
             why_g.append("매출총이익률 미공시 + 영업이익률 악화")
     else:
         if g("profitable"):
-            floor = max(C.G_GPM_FLOOR_PROFITABLE, g("ind_gpm_median") or 0)
+            floor = max(M.G_GPM_FLOOR_PROFITABLE, g("ind_gpm_median") or 0)
         else:
-            floor = max(C.G_GPM_FLOOR_UNPROFITABLE, g("ind_gpm_p70") or 0)
+            floor = max(M.G_GPM_FLOOR_UNPROFITABLE, g("ind_gpm_p70") or 0)
         if gpm < floor:
             why_g.append(f"매출총이익률 {gpm:.0%} < 기준 {floor:.0%}")
-        if g("gpm_prev") is not None and g("gpm_prev") - gpm > C.G_GPM_DECLINE_MAX:
+        if g("gpm_prev") is not None and g("gpm_prev") - gpm > M.G_GPM_DECLINE_MAX:
             why_g.append("매출총이익률 2%p 초과 하락")
     if not why_g:
         return "G", []
 
     # C 차선
-    if rg is None or rg < C.C_REV_GROWTH_MIN:
+    if rg is None or rg < M.C_REV_GROWTH_MIN:
         why_c.append("성장 10% 미만")
-    if g("fcf_yield_pct") is None or g("fcf_yield_pct") < C.C_FCF_YIELD_PCTL:
+    if g("fcf_yield_pct") is None or g("fcf_yield_pct") < M.C_FCF_YIELD_PCTL:
         why_c.append("FCF 수익률 상위 30% 밖")
     if not g("profitable"):
         why_c.append("영업적자")
-    if gpm is not None and gpm < C.C_GPM_FLOOR:   # 미공시는 영업흑자 조건으로 갈음
+    if gpm is not None and gpm < M.C_GPM_FLOOR:   # 미공시는 영업흑자 조건으로 갈음
         why_c.append("매출총이익률 20% 미만")
-    if (g("mkt_cap") or 0) > C.C_MKT_CAP_MAX:
-        why_c.append("시총 100억 달러 초과")
+    if (g("mkt_cap") or 0) > M.C_MKT_CAP_MAX:
+        why_c.append(f"시총 {M.fmt_money(M.C_MKT_CAP_MAX)} 초과")
     if is_cyclical(c):
         why_c.append("경기 민감 원자재·해운 업종")
     if not why_c:
@@ -251,13 +250,14 @@ def score(passed):
         else:
             s["S12"] = round(((1 - vp) if c["lane"] == "G" else vp) * 5, 1)
         cap = c.get("mkt_cap") or 0
-        s["S13"] = 6 if cap < 2e9 else 4 if cap < 5e9 else 2 if cap < 10e9 else 1
-        si = c.get("short_pct_float")
-        s["S18s"] = 0 if si is None else (3 if si < 0.05 else 1 if si < 0.10 else 0)
+        s["S13"] = next((pts for lim, pts in M.CAP_BANDS if cap < lim), 1)
+        if M.USE_SHORT:
+            si = c.get("short_pct_float")
+            s["S18s"] = 0 if si is None else (3 if si < 0.05 else 1 if si < 0.10 else 0)
         c["scores"] = s
         c["auto_score"] = round(sum(s.values()), 1)
-        c["auto_score_pct"] = c["auto_score"] / C.AUTO_SCORE_MAX
-        c["priority"] = c["auto_score_pct"] >= C.PRIORITY_SCORE_PCT
+        c["auto_score_pct"] = c["auto_score"] / M.AUTO_SCORE_MAX
+        c["priority"] = c["auto_score_pct"] >= M.PRIORITY_SCORE_PCT
 
 
 def run(companies):
@@ -292,7 +292,7 @@ def run(companies):
 
 def entry_tags(c):
     """3단계 진입 속도 참고 정보와 주의 표시 (점수 아님)."""
-    tags = []
+    tags = list(M.extra_tags(c))
     if is_cyclical(c):
         tags.append("경기 민감 업종")
     if c.get("gpm") is None:

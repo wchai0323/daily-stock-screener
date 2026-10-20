@@ -13,6 +13,7 @@ MKT_CAP_MAX = 20e9           # 200억 달러 (H3과 동일)
 REVENUE_TTM_MIN = 50e6       # TTM 매출 5천만 달러
 ADV20_MIN = 5e6              # 20일 평균 거래대금 500만 달러
 PRICE_MIN = 3.0              # 주가 3달러
+PRICE_LABEL = "3달러"
 MIN_QUARTERS = 8             # TTM YoY 계산에 필요한 최소 분기 수
 
 # 제외 업종 (SIC): 은행·신용·증권·보험(6000~6499), SPAC(6770), REIT(6798)

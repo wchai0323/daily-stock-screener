@@ -70,6 +70,7 @@ jobs:
           git add data/results data/snapshots data/last_run.json
           if ! git diff --cached --quiet; then
             git commit -m "screen: $(date -u +%F)"
+            git pull --rebase
             git push
           fi
 

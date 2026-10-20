@@ -187,7 +187,7 @@ def test_universe_exclusions():
     screen.run([bank, china, big] + _peers())
     assert "금융·REIT·SPAC 업종" in bank["fail"]
     assert any(r.startswith("H7") for r in china["fail"])
-    assert any("200억" in r for r in big["fail"])
+    assert any("시가총액" in r and "초과" in r for r in big["fail"])
 
 
 def test_diff_and_render():
@@ -240,7 +240,7 @@ def test_c_lane_excludes_commodities_and_large_caps():
     screen.run([energy, large, ok] + _peers() + energy_peers)
     assert ok["pass"] and ok["lane"] == "C", ok["fail"]
     assert not energy["pass"] and any("원자재" in r for r in energy["fail"])
-    assert not large["pass"] and any("100억" in r for r in large["fail"])
+    assert not large["pass"] and any("시총 $10.0B 초과" in r for r in large["fail"])
 
 
 def test_tiny_base_revenue_growth_rejected():

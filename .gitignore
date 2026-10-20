@@ -3,3 +3,5 @@ __pycache__/
 .pytest_cache/
 data/cache/
 data/out/
+data/kr/cache/
+data/kr/out/
