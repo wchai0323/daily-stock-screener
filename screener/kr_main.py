@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 # 한국 결과는 data/kr 아래에 따로 쌓는다 (store가 import될 때 경로를 정하므로 먼저 설정)
 os.environ.setdefault("SCREENER_DATA_DIR", str(Path(__file__).resolve().parent.parent / "data" / "kr"))
 
-from . import dart, facts, markets, metrics, prices, report, screen, store  # noqa: E402
+from . import dart, facts, kr_prices, markets, metrics, prices, report, screen, store  # noqa: E402
 from . import kr_config as K  # noqa: E402
 from . import kr_rules as R  # noqa: E402
 
@@ -175,29 +175,39 @@ def main():
         corps = corps[:limit]
     log(f"상장사 {len(corps):,}개")
 
-    # 2) 주가: 코스피(.KS)·코스닥(.KQ) 접미사를 모르면 둘 다 시도, 맞는 쪽을 기억
-    suffix = state.get("suffix") or {}
-    tickers = []
-    for c in corps:
-        s = suffix.get(c["stock_code"])
-        tickers += [c["stock_code"] + s] if s else [c["stock_code"] + ".KS", c["stock_code"] + ".KQ"]
-    px_raw = prices.fetch_prices(tickers)
-    px = {}
-    for t, v in px_raw.items():
-        code, sfx = t.split(".")
-        suffix[code] = "." + sfx
-        px[code] = v
-    state["suffix"] = suffix
-    log(f"주가 수신 {len(px):,}개")
+    # 2) 기업 정보(시장 구분·업종·주소): DART 목록에는 상장폐지 기업도 섞여 있어 법인구분으로 현재 상장사만 남긴다
+    infos = {}
+    try:
+        for i, c in enumerate(corps, 1):
+            obj = load_corp(c["corp_code"])
+            before = (obj.get("info") or {}).get("fetched")
+            refresh_info(client, c["corp_code"], obj, today)
+            if obj["info"].get("fetched") != before:
+                save_corp(c["corp_code"], obj)
+            infos[c["corp_code"]] = obj["info"]
+            if i % 500 == 0:
+                log(f"  기업 정보 {i}/{len(corps)} (DART 호출 {client.count:,}건)")
+    except dart.BudgetExceeded as e:
+        budget_hit = str(e)
+        log(f"DART 예산 소진(기업 정보 단계): {e}")
+    listed = [c for c in corps if (infos.get(c["corp_code"]) or {}).get("market") in ("KOSPI", "KOSDAQ")]
+    suffix = {c["stock_code"]: ".KS" if infos[c["corp_code"]]["market"] == "KOSPI" else ".KQ" for c in listed}
+    log(f"현재 상장(코스피·코스닥) {len(listed):,}개 / 기업 정보 확보 {len(infos):,}개")
 
-    # 3) 유동성·주가 사전 필터를 통과한 기업만 DART 재무를 받는다 (호출 수 절약)
-    cands = [c for c in corps if c["stock_code"] in px
+    # 3) 주가: 네이버 금융 일별 시세 (실패분만 Yahoo)
+    px = kr_prices.fetch({c["stock_code"]: c["stock_code"] + suffix[c["stock_code"]] for c in listed}, today)
+    log(f"주가 수신 {len(px):,}개 {kr_prices.LAST_DIAG}")
+
+    # 4) 유동성·주가 사전 필터를 통과한 기업만 DART 재무를 받는다 (호출 수 절약)
+    cands = [c for c in listed if c["stock_code"] in px
              and px[c["stock_code"]]["adv20"] >= K.ADV20_MIN and px[c["stock_code"]]["price"] >= K.PRICE_MIN]
     cands.sort(key=lambda c: -px[c["stock_code"]]["adv20"])
     log(f"유동성 통과 {len(cands):,}개")
 
     try:
-        # 4) 최근 정기보고서 제출 기업 (실적 시즌에 새 분기를 바로 반영)
+        if budget_hit:
+            raise dart.BudgetExceeded(budget_hit)
+        # 5) 최근 정기보고서 제출 기업 (실적 시즌에 새 분기를 바로 반영)
         last = state.get("filings_checked")
         bgn = dt.date.fromisoformat(last) - dt.timedelta(days=2) if last else today - dt.timedelta(days=30)
         recent = {}
@@ -337,12 +347,12 @@ def main():
     complete = sum(1 for c in companies if (c.get("quarters") or 0) >= K.MIN_QUARTERS)
     store.save_run_summary({
         "run_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-        "screen_date": today.isoformat(), "listed": len(corps), "with_prices": len(px),
+        "screen_date": today.isoformat(), "dart_corps_with_stock_code": len(corps), "with_prices": len(px),
         "liquid_candidates": len(cands), "with_8q_financials": complete, "universe": len(universe),
         "passed": len(passed), "lanes": {"G": sum(c["lane"] == "G" for c in passed),
                                          "C": sum(c["lane"] == "C" for c in passed)},
         "new": None if new is None else len(new), "exits": None if exits is None else len(exits),
-        "prices": dict(prices.LAST_DIAG), "sample_tickers": tickers[:6],
+        "listed_now": len(listed), "prices": dict(kr_prices.LAST_DIAG),
         "dart_calls": client.count, "dart_budget_hit": budget_hit, "mail": mail_status, "yahoo": yahoo_diag,
     })
     log(f"완료 (DART 호출 {client.count:,}건, 메일 {mail_status})")

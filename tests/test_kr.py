@@ -170,8 +170,7 @@ def test_kr_main_end_to_end(kr_env, monkeypatch):
 
     monkeypatch.setattr(kr_main.dart, "DartClient", FakeDart)
     px = {"price": 45000.0, "price_date": "2026-10-20", "adv20": 50e8, "hi52": 60000, "lo52": 30000, "ma200": 42000}
-    monkeypatch.setattr(kr_main.prices, "fetch_prices",
-                        lambda tickers: {t: dict(px) for t in tickers if t.endswith(".KQ")})
+    monkeypatch.setattr(kr_main.kr_prices, "fetch", lambda codes, today=None: {c: dict(px) for c in codes})
     monkeypatch.setattr(kr_main.prices, "fetch_quote_info",
                         lambda tickers: ({t: kr_main.prices.parse_info({"forwardPE": 15.0}) for t in tickers}, {}))
 
@@ -194,3 +193,14 @@ def test_kr_main_end_to_end(kr_env, monkeypatch):
     import json
     summary = json.loads((tmp / "last_run.json").read_text(encoding="utf-8"))
     assert summary["passed"] >= 1 and summary["dart_budget_hit"] is None
+
+
+def test_parse_naver_sise():
+    from screener import kr_prices, prices
+    text = """[['날짜', '시가', '고가', '저가', '종가', '거래량', '외국인소진율'],
+["20261016", 44000, 45500, 43800, 45000, 120000, 12.3],
+["20261019", 45000, 46000, 44500, 45500, 100000, 12.4]
+]"""
+    df = kr_prices.parse_naver(text)
+    assert list(df["Close"]) == [45000, 45500] and str(df.index[-1].date()) == "2026-10-19"
+    assert prices.summarize(df) is None          # 20일 미만이면 요약하지 않음
