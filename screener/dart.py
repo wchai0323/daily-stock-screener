@@ -111,6 +111,11 @@ class DartClient:
         js = self._json("stockTotqySttus.json", corp_code=corp_code, bsns_year=str(year), reprt_code=reprt_code)
         return parse_common_shares((js or {}).get("list"))
 
+    def major_holders(self, corp_code, year, reprt_code):
+        """정기보고서의 최대주주 및 특수관계인 현황 (hyslrSttus)."""
+        js = self._json("hyslrSttus.json", corp_code=corp_code, bsns_year=str(year), reprt_code=reprt_code)
+        return parse_major_holders((js or {}).get("list"))
+
     def filings(self, bgn: dt.date, end: dt.date, pblntf_ty, detail_ty=None):
         """공시 검색 (기업 미지정 시 3개월 이내). 모든 페이지를 모아 돌려준다."""
         out, page = [], 1
@@ -181,6 +186,24 @@ def _amount(v):
         return float(s)
     except ValueError:
         return None
+
+
+def parse_major_holders(rows):
+    """최대주주·특수관계인 목록 → [{'name', 'relate', 'pct'}] (기말 지분율 큰 순).
+
+    우선주 행은 빼고, 같은 사람이 여러 줄이면 지분율을 합친다. '계' 합계 행은 버린다.
+    """
+    agg = {}
+    for r in rows or []:
+        nm = (r.get("nm") or "").strip()
+        if not nm or nm.replace(" ", "") in ("계", "합계", "소계"):
+            continue
+        if "우선" in (r.get("stock_knd") or ""):
+            continue
+        pct = _amount(r.get("trmend_posesn_stock_qota_rt")) or 0.0
+        cur = agg.setdefault(nm, {"name": nm, "relate": (r.get("relate") or "").strip(), "pct": 0.0})
+        cur["pct"] = round(cur["pct"] + pct, 2)
+    return sorted(agg.values(), key=lambda h: -h["pct"])
 
 
 def _norm(name):

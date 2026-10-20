@@ -130,6 +130,23 @@ def fetch_report(client, cc, obj, year, code, today):
     return True
 
 
+def refresh_holders(client, cc, obj, schedule, today):
+    """최대주주 현황: 받아 둔 최신 정기보고서가 바뀔 때만 다시 받는다."""
+    oks = [(y, cd) for y, cd in schedule
+           if (obj["reports"].get(dart.report_key(y, cd)) or {}).get("status") == "ok"]
+    if not oks:
+        return
+    y, cd = oks[-1]
+    key = dart.report_key(y, cd)
+    if (obj.get("holders") or {}).get("key") == key:
+        return
+    obj["holders"] = {"key": key, "checked": today.isoformat(), "list": client.major_holders(cc, y, cd)}
+
+
+def holders_of(obj):
+    return (obj.get("holders") or {}).get("list") or []
+
+
 def needs_fetch(rep, year, code, today, filed_recently):
     if filed_recently:
         return True
@@ -239,6 +256,7 @@ def main():
 
         # 6) 기업 정보 → 재무 → 주식 수. 최근 제출 기업을 먼저 처리
         cands.sort(key=lambda c: (c["corp_code"] not in recent, -px[c["stock_code"]]["adv20"]))
+        china_list = store.load_holdings("china_linked_kr.txt")
         counter = {"reports": 0, "done": 0}
         lock = threading.Lock()
 
@@ -254,6 +272,8 @@ def main():
                 pre = dict(info, name=info.get("name") or c["corp_name"])
                 pre["is_holding"] = R.is_holding(info.get("ksic"), pre["name"])
                 pre["is_china"] = R.is_china(info.get("address"), pre["name"])
+                pre["china_holder"] = R.china_holder(holders_of(obj))
+                pre["china_listed"] = c["stock_code"] in china_list
                 if not R.universe_extra(pre):
                     n = 0
                     for year, code in schedule:
@@ -277,6 +297,7 @@ def main():
                                 rep["rows"].setdefault(dart.TAG["shares"], []).append(
                                     [f"{y}-{dart.Q_START[q]}", dart.period_end(y, cd), rep["shares"], None,
                                      rep.get("rcept_no")])
+                    refresh_holders(client, cc, obj, schedule, today)
                     with lock:
                         counter["reports"] += n
             except dart.BudgetExceeded as e:
@@ -303,6 +324,7 @@ def main():
 
     # 7) 지표 계산
     companies = []
+    china_list = store.load_holdings("china_linked_kr.txt")
     for c in cands:
         obj = load_corp(c["corp_code"])
         info = obj.get("info")
@@ -317,7 +339,9 @@ def main():
                "ksic": info.get("ksic"), "fiscal_month": info.get("fiscal_month"),
                "is_holding": R.is_holding(info.get("ksic"), name), "is_china": R.is_china(info.get("address"), name),
                "risk_flags": (state.get("risk_flags") or {}).get(c["corp_code"], []), "fs_div": obj.get("fs_div"),
-               "shares_out": facts.shares_outstanding(comp), "latest_filed": facts.latest_filed(comp)}
+               "shares_out": facts.shares_outstanding(comp), "latest_filed": facts.latest_filed(comp),
+               "china_holder": R.china_holder(holders_of(obj)), "china_listed": c["stock_code"] in china_list,
+               "holder_tag": R.largest_holder_tag(holders_of(obj))}
         row.update(m)
         row.update(px[c["stock_code"]])
         shares = row.get("shares_out")

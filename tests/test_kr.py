@@ -114,6 +114,29 @@ def test_kr_rules():
     assert any("관리종목" in r for r in kr_rules.extra_hard({"risk_flags": ["관리종목"]}))
 
 
+def test_china_controlling_holder():
+    from screener import dart
+    rows = [
+        {"nm": "동심반도체주식유한공사 (Dosilicon Co., Ltd.)", "relate": "본인", "stock_knd": "보통주",
+         "trmend_posesn_stock_qota_rt": "30.20"},
+        {"nm": "안승한", "relate": "임원", "stock_knd": "보통주", "trmend_posesn_stock_qota_rt": "0.29"},
+        {"nm": "계", "relate": "-", "stock_knd": "보통주", "trmend_posesn_stock_qota_rt": "30.49"},
+    ]
+    hs = dart.parse_major_holders(rows)
+    assert [h["name"][:5] for h in hs] == ["동심반도체", "안승한"] and hs[0]["pct"] == 30.2
+    ch = kr_rules.china_holder(hs)
+    assert ch and ch["pct"] == 30.2
+    base = {"market": "KOSDAQ", "ksic": "26110", "name": "피델릭스", "fiscal_month": 12}
+    assert any("중국계 지배주주" in r for r in kr_rules.universe_extra(dict(base, china_holder=ch)))
+    assert any("수동 목록" in r for r in kr_rules.universe_extra(dict(base, china_listed=True)))
+    # 국내 그룹의 중국 현지법인이 특수관계인으로 소량 보유한 경우는 제외하지 않는다
+    korean = [{"name": "삼성전자", "relate": "본인", "pct": 20.0},
+              {"name": "삼성(중국)투자유한공사", "relate": "계열회사", "pct": 0.3}]
+    assert kr_rules.china_holder(korean) is None
+    assert kr_rules.china_holder([{"name": "Hong Kong Holdings Ltd", "relate": "계열회사", "pct": 12.0}])
+    assert kr_rules.largest_holder_tag(hs).startswith("최대주주 동심반도체")
+
+
 @pytest.fixture
 def kr_env(tmp_path, monkeypatch):
     monkeypatch.setenv("SCREENER_DATA_DIR", str(tmp_path))
@@ -135,6 +158,7 @@ def test_kr_main_end_to_end(kr_env, monkeypatch):
         "00000002": ("222220", "메자닌많은", "26110", "서울", QREV, 900e8),     # CB 잔액이 시총의 20%
         "00000003": ("333330", "중국기업", "26110", "중국 산둥성", QREV, 0.0),
         "00000004": ("444440", "관리기업", "26110", "서울", QREV, 0.0),
+        "00000005": ("666660", "중국계지배", "26110", "경기도 성남시", QREV, 0.0),   # 한국 본사, 중국계 최대주주
     }
     for i in range(10):
         corps[f"0000010{i}"] = (f"55555{i}", f"비교군{i}", "26110", "서울", flat, 0.0)
@@ -162,6 +186,11 @@ def test_kr_main_end_to_end(kr_env, monkeypatch):
         def shares(self, cc, year, code):
             return 10_000_000
 
+        def major_holders(self, cc, year, code):
+            if cc == "00000005":
+                return [{"name": "동심반도체주식유한공사", "relate": "본인", "pct": 30.2}]
+            return [{"name": "창업자", "relate": "본인", "pct": 25.0}]
+
         def filings(self, bgn, end, ty, detail=None):
             if ty == "I":
                 return [{"corp_code": "00000004", "report_nm": "관리종목지정(감사의견 거절)", "rcept_dt": "20260401",
@@ -184,7 +213,8 @@ def test_kr_main_end_to_end(kr_env, monkeypatch):
     res = (tmp / "results" / "2026-10-20.csv").read_text(encoding="utf-8-sig")
     html = (tmp / "out" / "latest.html").read_text(encoding="utf-8")
     assert "111110.KQ" in res                              # 성장전자 통과 (시총 4,500억 원)
-    assert "222220" not in res and "333330" not in res and "444440" not in res
+    assert "222220" not in res and "333330" not in res and "444440" not in res and "666660" not in res
+    assert "최대주주 창업자 25.0%" in html
     assert "한국 주식 스크리너" in html and "4,500억원" in html and "반도체·전자부품·통신장비" in html
     snap = (tmp / "snapshots" / "2026-10-20.csv.gz")
     import pandas as pd

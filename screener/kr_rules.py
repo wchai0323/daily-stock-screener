@@ -28,6 +28,10 @@ KSIC2 = {
 }
 
 CHINA_WORDS = ("중국", "중화인민공화국", "홍콩", "CHINA", "HONG KONG", "PRC")
+# 지배주주 이름에서 중국계를 알아보는 단어. '유한공사'(有限公司)는 중국·홍콩 법인의 한국어 표기
+CHINA_HOLDER_WORDS = CHINA_WORDS + ("유한공사", "유한책임공사", "有限公司", "有限责任公司", "中国", "香港",
+                                    "SHENZHEN", "SHANGHAI", "BEIJING")
+CHINA_HOLDER_MIN_PCT = 5.0    # 최대주주 본인이 아니면 지분 5% 이상일 때만 (국내 그룹의 중국 현지법인 소량 보유는 무시)
 
 
 def _ksic(c):
@@ -64,6 +68,26 @@ def is_china(address, name):
     return any(w in a for w in CHINA_WORDS) or "차이나" in (name or "")
 
 
+def china_holder(holders):
+    """최대주주·특수관계인 중 중국계가 지배 지분을 가지면 그 주주를 돌려준다. 없으면 None."""
+    for h in holders or []:
+        nm = (h.get("name") or "").upper()
+        if not any(w in nm for w in CHINA_HOLDER_WORDS):
+            continue
+        if "본인" in (h.get("relate") or "") or "최대주주" in (h.get("relate") or "") \
+                or (h.get("pct") or 0) >= CHINA_HOLDER_MIN_PCT:
+            return h
+    return None
+
+
+def largest_holder_tag(holders):
+    if not holders:
+        return None
+    h = holders[0]
+    nm = h["name"] if len(h["name"]) <= 14 else h["name"][:14] + "…"
+    return f"최대주주 {nm} {h['pct']:.1f}%"
+
+
 def universe_extra(c):
     r = []
     if c.get("market") not in ("KOSPI", "KOSDAQ"):
@@ -78,6 +102,11 @@ def universe_extra(c):
         r.append("리츠")
     if c.get("is_china"):
         r.append("H7 중국 국적·본사")
+    ch = c.get("china_holder")
+    if ch:
+        r.append(f"H7 중국계 지배주주 ({ch['name']} {ch['pct']:.1f}%)")
+    if c.get("china_listed"):
+        r.append("H7 중국 연관 (수동 목록)")
     if c.get("fiscal_month") not in (None, 12):
         r.append("12월 결산 아님 (분기 계산 미지원)")
     return r
@@ -103,6 +132,8 @@ def extra_tags(c):
         tags.append(f"CB·BW 잔액 시총의 {mz:.0%}")
     if c.get("fs_div") == "OFS":
         tags.append("별도재무")
+    if c.get("holder_tag"):
+        tags.append(c["holder_tag"])
     return tags
 
 
