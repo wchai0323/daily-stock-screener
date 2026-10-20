@@ -1,5 +1,5 @@
 {
- "run_at_utc": "2026-10-20T08:40:21+00:00",
+ "run_at_utc": "2026-10-20T09:12:12+00:00",
  "screen_date": "2026-10-20",
  "dart_corps_with_stock_code": 3935,
  "with_prices": 2581,
@@ -23,9 +23,9 @@
   "yahoo_fallback_ok": 0,
   "received": 2581
  },
- "dart_calls": 6729,
+ "dart_calls": 7,
  "dart_budget_hit": null,
- "mail": "skipped (skip_mail)",
+ "mail": "sent",
  "yahoo": {
   "tickers": 38,
   "errors": {},
