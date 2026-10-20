@@ -1,0 +1,30 @@
+{
+ "run_at_utc": "2026-10-20T04:30:06+00:00",
+ "screen_date": "2026-10-20",
+ "listed": 150,
+ "with_prices": 0,
+ "liquid_candidates": 0,
+ "with_8q_financials": 0,
+ "universe": 0,
+ "passed": 0,
+ "lanes": {
+  "G": 0,
+  "C": 0
+ },
+ "new": null,
+ "exits": null,
+ "dart_calls": 633,
+ "dart_budget_hit": null,
+ "mail": "skipped (skip_mail)",
+ "yahoo": {
+  "tickers": 0,
+  "errors": {},
+  "still_missing": [],
+  "filled_short_pct_float": 0,
+  "filled_pe_ttm": 0,
+  "filled_pe_fwd": 0,
+  "filled_peg": 0,
+  "filled_sector": 0,
+  "filled_industry": 0
+ }
+}
