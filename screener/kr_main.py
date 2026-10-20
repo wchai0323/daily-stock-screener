@@ -342,6 +342,7 @@ def main():
         "passed": len(passed), "lanes": {"G": sum(c["lane"] == "G" for c in passed),
                                          "C": sum(c["lane"] == "C" for c in passed)},
         "new": None if new is None else len(new), "exits": None if exits is None else len(exits),
+        "prices": dict(prices.LAST_DIAG), "sample_tickers": tickers[:6],
         "dart_calls": client.count, "dart_budget_hit": budget_hit, "mail": mail_status, "yahoo": yahoo_diag,
     })
     log(f"완료 (DART 호출 {client.count:,}건, 메일 {mail_status})")

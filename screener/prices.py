@@ -25,21 +25,30 @@ def summarize(df):
     }
 
 
+# 마지막 fetch_prices 호출의 진단 (실행 요약에 남김)
+LAST_DIAG = {}
+
+
 def fetch_prices(tickers, chunk_size=150, pause=1.0):
     import yfinance as yf
 
     out = {}
+    diag = {"requested": len(tickers), "chunks": 0, "failed_chunks": 0, "empty_chunks": 0, "first_error": None}
     for chunk in _chunks(list(tickers), chunk_size):
+        diag["chunks"] += 1
         for attempt in range(3):
             try:
                 df = yf.download(chunk, period="1y", interval="1d", group_by="ticker",
                                  auto_adjust=False, threads=True, progress=False)
                 break
-            except Exception:  # noqa: BLE001 - 네트워크 오류 시 재시도
+            except Exception as e:  # noqa: BLE001 - 네트워크 오류 시 재시도
+                diag["first_error"] = diag["first_error"] or f"{type(e).__name__}: {str(e)[:150]}"
                 time.sleep(5 * (attempt + 1))
         else:
+            diag["failed_chunks"] += 1
             continue
         if df is None or df.empty:
+            diag["empty_chunks"] += 1
             continue
         multi = isinstance(df.columns, pd.MultiIndex)
         for t in chunk:
@@ -51,6 +60,10 @@ def fetch_prices(tickers, chunk_size=150, pause=1.0):
             if s:
                 out[t] = s
         time.sleep(pause)
+    diag["received"] = len(out)
+    diag["sample_received"] = sorted(out)[:5]
+    LAST_DIAG.clear()
+    LAST_DIAG.update(diag)
     return out
 
 
