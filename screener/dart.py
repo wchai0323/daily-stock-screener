@@ -10,6 +10,7 @@ import datetime as dt
 import io
 import os
 import re
+import threading
 import time
 import xml.etree.ElementTree as ET
 import zipfile
@@ -33,26 +34,36 @@ class BudgetExceeded(DartError):
 
 
 class DartClient:
-    def __init__(self, api_key=None, budget=15000, min_interval=0.1):
+    def __init__(self, api_key=None, budget=15000, min_interval=0.05, deadline=None):
         self.key = api_key or os.environ.get("DART_API_KEY")
         if not self.key:
             raise DartError("DART_API_KEY 환경변수가 필요합니다")
         self.budget = budget
+        self.deadline = deadline            # time.time() 기준. 넘으면 수집을 멈춘다
         self.count = 0
         self.min_interval = min_interval
         self._last = 0.0
+        self._lock = threading.Lock()       # 여러 스레드가 함께 써도 호출 간격·건수를 지킨다
         self.session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_connections=8, pool_maxsize=8)
+        self.session.mount("https://", adapter)
 
-    def _get(self, path, **params):
-        if self.count >= self.budget:
-            raise BudgetExceeded(f"DART 호출 예산 {self.budget}건 소진")
-        params["crtfc_key"] = self.key
-        for attempt in range(4):
+    def _slot(self):
+        with self._lock:
+            if self.count >= self.budget:
+                raise BudgetExceeded(f"DART 호출 예산 {self.budget}건 소진")
+            if self.deadline and time.time() > self.deadline:
+                raise BudgetExceeded("이번 실행의 DART 수집 시간 한도 도달")
             wait = self.min_interval - (time.time() - self._last)
             if wait > 0:
                 time.sleep(wait)
             self._last = time.time()
             self.count += 1
+
+    def _get(self, path, **params):
+        params["crtfc_key"] = self.key
+        for attempt in range(4):
+            self._slot()
             try:
                 r = self.session.get(BASE + path, params=params, timeout=60)
             except requests.RequestException:

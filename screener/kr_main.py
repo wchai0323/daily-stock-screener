@@ -11,7 +11,9 @@ import gzip
 import json
 import os
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -158,7 +160,8 @@ def main():
     today = dt.datetime.now(ZoneInfo("Asia/Seoul")).date()
     log(f"실행일(한국) {today}")
     screen.use(markets.korea())
-    client = dart.DartClient(budget=K.DART_DAILY_BUDGET)
+    started = time.time()
+    client = dart.DartClient(budget=K.DART_DAILY_BUDGET, deadline=started + K.DART_TIME_LIMIT_MIN * 60)
     state = load_json(CACHE / "state.json.gz", {})
     schedule = dart.recent_reports(today, K.REPORT_QUARTERS)
     log(f"대상 보고서: {schedule[0]} ~ {schedule[-1]}")
@@ -177,19 +180,31 @@ def main():
 
     # 2) 기업 정보(시장 구분·업종·주소): DART 목록에는 상장폐지 기업도 섞여 있어 법인구분으로 현재 상장사만 남긴다
     infos = {}
-    try:
-        for i, c in enumerate(corps, 1):
+    stop = threading.Event()
+    hit = []
+
+    def info_one(c):
+        if stop.is_set():
+            return
+        try:
             obj = load_corp(c["corp_code"])
             before = (obj.get("info") or {}).get("fetched")
             refresh_info(client, c["corp_code"], obj, today)
             if obj["info"].get("fetched") != before:
                 save_corp(c["corp_code"], obj)
             infos[c["corp_code"]] = obj["info"]
-            if i % 500 == 0:
-                log(f"  기업 정보 {i}/{len(corps)} (DART 호출 {client.count:,}건)")
-    except dart.BudgetExceeded as e:
-        budget_hit = str(e)
-        log(f"DART 예산 소진(기업 정보 단계): {e}")
+        except dart.BudgetExceeded as e:
+            stop.set()
+            hit.append(str(e))
+        except dart.DartError as e:
+            log(f"  {c['corp_code']} 기업 정보 실패: {e}")
+
+    with ThreadPoolExecutor(max_workers=K.DART_WORKERS) as ex:
+        list(ex.map(info_one, corps))
+    if hit:
+        budget_hit = hit[0]
+        log(f"DART 수집 중단(기업 정보 단계): {budget_hit}")
+    save_json(CACHE / "state.json.gz", state)
     listed = [c for c in corps if (infos.get(c["corp_code"]) or {}).get("market") in ("KOSPI", "KOSDAQ")]
     suffix = {c["stock_code"]: ".KS" if infos[c["corp_code"]]["market"] == "KOSPI" else ".KQ" for c in listed}
     log(f"현재 상장(코스피·코스닥) {len(listed):,}개 / 기업 정보 확보 {len(infos):,}개")
@@ -224,42 +239,63 @@ def main():
 
         # 6) 기업 정보 → 재무 → 주식 수. 최근 제출 기업을 먼저 처리
         cands.sort(key=lambda c: (c["corp_code"] not in recent, -px[c["stock_code"]]["adv20"]))
-        for i, c in enumerate(cands, 1):
+        counter = {"reports": 0, "done": 0}
+        lock = threading.Lock()
+
+        def corp_one(c):
+            if stop.is_set():
+                return
             cc = c["corp_code"]
             obj = load_corp(cc)
-            refresh_info(client, cc, obj, today)
-            info = obj["info"]
-            # 어차피 제외될 기업은 재무를 받지 않는다
-            pre = dict(info, name=info.get("name") or c["corp_name"])
-            pre["is_holding"] = R.is_holding(info.get("ksic"), pre["name"])
-            pre["is_china"] = R.is_china(info.get("address"), pre["name"])
-            if R.universe_extra(pre):
-                save_corp(cc, obj)
-                continue
-            for year, code in schedule:
-                key = dart.report_key(year, code)
-                rep = obj["reports"].get(key)
-                if needs_fetch(rep, year, code, today, key in recent.get(cc, set())):
-                    prev_tries = (rep or {}).get("tries", 0)
-                    ok = fetch_report(client, cc, obj, year, code, today)
-                    fetched_reports += 1
-                    if not ok:
-                        obj["reports"][key]["tries"] = prev_tries + 1
-            # 시총·희석용 주식 수: 받은 보고서 중 최근 것과 그 1년 전 것
-            oks = [(y, cd) for y, cd in schedule if (obj["reports"].get(dart.report_key(y, cd)) or {}).get("status") == "ok"]
-            for y, cd in (oks[-1:] + oks[-5:-4]) if oks else []:
-                rep = obj["reports"][dart.report_key(y, cd)]
-                if rep.get("shares") is None and not rep.get("shares_checked"):
-                    rep["shares"] = client.shares(cc, y, cd)
-                    rep["shares_checked"] = today.isoformat()
-                    if rep["shares"]:
-                        q, _ = dart.REPORTS[cd]
-                        rep["rows"].setdefault(dart.TAG["shares"], []).append(
-                            [f"{y}-{dart.Q_START[q]}", dart.period_end(y, cd), rep["shares"], None, rep.get("rcept_no")])
-            save_corp(cc, obj)
-            if i % 100 == 0:
-                log(f"  {i}/{len(cands)} (DART 호출 {client.count:,}건)")
-                save_json(CACHE / "state.json.gz", state)
+            try:
+                refresh_info(client, cc, obj, today)
+                info = obj["info"]
+                # 어차피 제외될 기업은 재무를 받지 않는다
+                pre = dict(info, name=info.get("name") or c["corp_name"])
+                pre["is_holding"] = R.is_holding(info.get("ksic"), pre["name"])
+                pre["is_china"] = R.is_china(info.get("address"), pre["name"])
+                if not R.universe_extra(pre):
+                    n = 0
+                    for year, code in schedule:
+                        key = dart.report_key(year, code)
+                        rep = obj["reports"].get(key)
+                        if needs_fetch(rep, year, code, today, key in recent.get(cc, set())):
+                            prev_tries = (rep or {}).get("tries", 0)
+                            if not fetch_report(client, cc, obj, year, code, today):
+                                obj["reports"][key]["tries"] = prev_tries + 1
+                            n += 1
+                    # 시총·희석용 주식 수: 받은 보고서 중 최근 것과 그 1년 전 것
+                    oks = [(y, cd) for y, cd in schedule
+                           if (obj["reports"].get(dart.report_key(y, cd)) or {}).get("status") == "ok"]
+                    for y, cd in (oks[-1:] + oks[-5:-4]) if oks else []:
+                        rep = obj["reports"][dart.report_key(y, cd)]
+                        if rep.get("shares") is None and not rep.get("shares_checked"):
+                            rep["shares"] = client.shares(cc, y, cd)
+                            rep["shares_checked"] = today.isoformat()
+                            if rep["shares"]:
+                                q, _ = dart.REPORTS[cd]
+                                rep["rows"].setdefault(dart.TAG["shares"], []).append(
+                                    [f"{y}-{dart.Q_START[q]}", dart.period_end(y, cd), rep["shares"], None,
+                                     rep.get("rcept_no")])
+                    with lock:
+                        counter["reports"] += n
+            except dart.BudgetExceeded as e:
+                stop.set()
+                hit.append(str(e))
+            except dart.DartError as e:
+                log(f"  {cc} 재무 수집 실패: {e}")
+            finally:
+                save_corp(cc, obj)          # 중간에 멈춰도 받은 보고서는 남긴다
+                with lock:
+                    counter["done"] += 1
+                    if counter["done"] % 200 == 0:
+                        log(f"  {counter['done']}/{len(cands)} (DART 호출 {client.count:,}건)")
+
+        with ThreadPoolExecutor(max_workers=K.DART_WORKERS) as ex:
+            list(ex.map(corp_one, cands))
+        fetched_reports = counter["reports"]
+        if hit:
+            raise dart.BudgetExceeded(hit[0])
         log(f"보고서 수집 {fetched_reports:,}건")
     except dart.BudgetExceeded as e:
         budget_hit = str(e)

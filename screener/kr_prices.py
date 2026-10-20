@@ -4,7 +4,7 @@ Yahoo는 한국 종목을 일괄로 요청하면 상당수가 빈 응답이라 1
 """
 import ast
 import datetime as dt
-import time
+from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 import requests
@@ -29,30 +29,38 @@ def parse_naver(text):
     return df.set_index("Date").sort_index()
 
 
-def fetch(codes_to_ticker, today=None, pause=0.12):
+def fetch(codes_to_ticker, today=None, workers=8):
     """{6자리 코드: 티커(005930.KS)} → {코드: 가격 요약}. 진단은 LAST_DIAG에."""
     today = today or dt.date.today()
     start = (today - dt.timedelta(days=380)).strftime("%Y%m%d")
     end = today.strftime("%Y%m%d")
     s = requests.Session()
     s.headers.update({"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com/"})
-    out, errors, first_error = {}, 0, None
-    for code in codes_to_ticker:
+    s.mount("https://", requests.adapters.HTTPAdapter(pool_connections=workers, pool_maxsize=workers))
+    out, errs = {}, []
+
+    def one(code):
         try:
             r = s.get(NAVER_URL, params={"symbol": code, "requestType": 1, "startTime": start, "endTime": end,
                                          "timeframe": "day"}, timeout=20)
             r.raise_for_status()
             df = parse_naver(r.text)
-            summary = prices.summarize(df) if df is not None else None
+            return code, (prices.summarize(df) if df is not None else None), None
+        except Exception as e:  # noqa: BLE001
+            return code, None, f"{type(e).__name__}: {str(e)[:120]}"
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        for code, summary, err in ex.map(one, list(codes_to_ticker)):
             if summary:
                 out[code] = summary
-        except Exception as e:  # noqa: BLE001
-            errors += 1
-            first_error = first_error or f"{type(e).__name__}: {str(e)[:120]}"
-        time.sleep(pause)
+            if err:
+                errs.append(err)
+    errors, first_error = len(errs), (errs[0] if errs else None)
 
     # 네이버에서 못 받은 종목만 Yahoo로
     missing = {c: t for c, t in codes_to_ticker.items() if c not in out}
+    if len(missing) > 400:                  # 네이버가 통째로 막힌 날 Yahoo로 수천 건을 돌리지 않는다
+        missing = dict(list(missing.items())[:400])
     yahoo = prices.fetch_prices(list(missing.values())) if missing else {}
     by_ticker = {t: c for c, t in missing.items()}
     for t, v in yahoo.items():

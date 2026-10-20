@@ -38,3 +38,5 @@ DART_DAILY_BUDGET = 15000     # DART 하루 한도 2만 건 중 이번 실행에
 REPORT_QUARTERS = 9           # 최근 9개 분기 보고서 (8분기 TTM 비교 + 여유)
 MISSING_RETRY_DAYS = 7        # 아직 안 나온 보고서는 7일 뒤 다시 확인
 COMPANY_INFO_MAX_AGE = 90
+DART_WORKERS = 4              # DART 동시 요청 수
+DART_TIME_LIMIT_MIN = 95      # 실행 시작 후 이 시간이 지나면 DART 수집을 멈추고 결과를 만든다 (나머지는 다음 실행)
