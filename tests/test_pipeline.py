@@ -294,3 +294,23 @@ def test_market_cap_shares_uses_larger_count():
     assert screen.market_cap_shares(100e6, 98e6) == 100e6
     assert screen.market_cap_shares(None, 50e6) == 50e6
     assert screen.market_cap_shares(None, None) is None
+
+
+def test_change_cause_classification():
+    """신규·이탈 원인: 실적 반영 / 재무 수정 / 가격 변동 / 기준 변경."""
+    from screener import report
+    good = _company("GOOD", make_facts(REV, gpm=0.6))
+    peers = _peers()
+    screen.run([good] + peers)
+    assert good["pass"]
+    base = {k: good.get(k) for k in ("period_end", "revenue_ttm", "rev_growth", "gpm", "opm", "dilution",
+                                      "op_asset_growth", "mkt_cap", "price", "adv20", "fcf_yield", "fcf_yield_pct", "ev")}
+    # 어제는 시총 250억 달러라 유니버스 밖 → 오늘 주가 하락으로 진입 = 가격 변동
+    assert report.change_cause(good, dict(base, mkt_cap=25e9)).startswith("가격 변동")
+    # 어제는 직전 분기 재무 → 새 분기 반영
+    assert report.change_cause(good, dict(base, period_end="2026-03-31")).startswith("실적 반영")
+    # 같은 분기인데 매출 성장률이 달랐음 → 정정 공시
+    assert report.change_cause(good, dict(base, rev_growth=0.10)) == "재무 수정 공시"
+    # 재무·가격이 같은데 결과가 다름 → 기준 변경
+    assert report.change_cause(good, dict(base)) == "기준 변경"
+    assert report.change_cause(good, None) == "유니버스 편입·이탈"

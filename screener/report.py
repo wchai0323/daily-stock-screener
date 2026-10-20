@@ -18,8 +18,11 @@ SNAPSHOT_COLS = [
     "ticker", "cik", "name", "exchange", "sic", "country", "mkt_cap", "price", "adv20", "revenue_ttm",
     "rev_growth", "q_yoy", "accel", "gpm", "gpm_prev", "gp_growth", "opm", "opm_change", "fcf_ttm",
     "fcf_yield", "dilution", "net_debt", "net_debt_ebitda", "runway_months", "op_asset_growth",
-    "gp_to_assets", "period_end", "pass", "lane", "auto_score", "fail",
+    "gp_to_assets", "period_end", "latest_filed", "fcf_yield_pct", "pass", "lane", "auto_score", "fail",
+    "criteria_version",
 ]
+# 재무에서 나오는 지표 (같은 분기인데 이 값이 바뀌면 정정 공시)
+FUNDAMENTAL_KEYS = ("revenue_ttm", "rev_growth", "gpm", "opm", "dilution", "op_asset_growth")
 
 
 def to_frame(rows, cols):
@@ -37,20 +40,96 @@ def to_frame(rows, cols):
     return pd.DataFrame(recs, columns=cols)
 
 
-def diff(today_pass, prev_df, all_today):
-    """신규 진입·이탈. today_pass: 통과 종목 dict 목록, prev_df: 전일 결과 CSV."""
-    today_set = {c["ticker"] for c in today_pass}
+def _isnan(v):
+    return v is None or (isinstance(v, float) and math.isnan(v))
+
+
+def _differs(a, b, tol=1e-6):
+    if _isnan(a) and _isnan(b):
+        return False
+    if _isnan(a) or _isnan(b):
+        return True
+    try:
+        return abs(float(a) - float(b)) > tol * max(1.0, abs(float(b)))
+    except (TypeError, ValueError):
+        return str(a) != str(b)
+
+
+# 주가에 따라 바뀌는 값. 이 값만 어제 것으로 되돌려 다시 심사해 결과가 뒤집히면 '가격 변동'
+PRICE_KEYS = ("mkt_cap", "price", "adv20", "fcf_yield", "fcf_yield_pct", "ev")
+
+
+def _passes(c):
+    from . import screen
+    if screen.universe_reasons(c):
+        return False
+    ok, _lane, _reasons = screen.hard_filter(c)
+    return ok
+
+
+def change_cause(today_c, prev_row):
+    """신규·이탈 원인.
+
+    1) 새 분기 재무가 들어왔으면 '실적 반영'
+    2) 같은 분기인데 재무 지표가 바뀌었으면 '재무 수정 공시'
+    3) 오늘 재무·기준에 주가 관련 값만 어제 것으로 되돌려 다시 심사 → 결과가 뒤집히면 '가격 변동'
+    4) 위 어느 것도 아니면 '기준 변경' (필터 기준이나 데이터 처리 방식이 바뀐 경우)
+    """
+    if today_c is None:
+        return "데이터 없음"
+    if prev_row is None:
+        return "유니버스 편입·이탈"
+    p_end, t_end = prev_row.get("period_end"), today_c.get("period_end")
+    if not _isnan(p_end) and t_end and str(p_end) != str(t_end):
+        return f"실적 반영 ({str(t_end)[:7]} 분기)"
+    if any(_differs(today_c.get(k), prev_row.get(k)) for k in FUNDAMENTAL_KEYS):
+        return "재무 수정 공시"
+    what_if = dict(today_c)
+    for k in PRICE_KEYS:
+        v = prev_row.get(k)
+        if not _isnan(v):
+            what_if[k] = v
+    if _passes(what_if) != bool(today_c.get("pass")):
+        cap_t, cap_p = today_c.get("mkt_cap"), prev_row.get("mkt_cap")
+        if cap_t and not _isnan(cap_p) and cap_p:
+            return f"가격 변동 (시총 {cap_t / cap_p - 1:+.0%})"
+        return "가격 변동"
+    return "기준 변경"
+
+
+def diff(today_pass, prev_df, all_today, prev_snap=None):
+    """신규 진입·이탈과 원인. today_pass: 통과 종목, prev_df: 전일 결과 CSV, prev_snap: 전일 스냅샷."""
     if prev_df is None:
         return None, None
+    today_set = {c["ticker"] for c in today_pass}
     prev_set = set(prev_df["ticker"].astype(str))
     by_ticker = {c["ticker"]: c for c in all_today}
+    prev_rows = {}
+    if prev_snap is not None:
+        prev_rows = {str(r["ticker"]): r for r in prev_snap.to_dict("records")}
+    # 전일 결과 CSV에는 기준 버전이 없으니, 스냅샷이 없으면 결과 CSV 행으로라도 비교
+    for r in prev_df.to_dict("records"):
+        prev_rows.setdefault(str(r["ticker"]), r)
+
     new = [c for c in today_pass if c["ticker"] not in prev_set]
+    for c in new:
+        c["change_cause"] = change_cause(c, prev_rows.get(c["ticker"]))
     exits = []
     for t in sorted(prev_set - today_set):
         c = by_ticker.get(t)
         exits.append({"ticker": t, "name": (c or {}).get("name") or "",
+                      "cause": change_cause(c, prev_rows.get(t)),
                       "reasons": (c or {}).get("fail") or ["오늘 데이터 없음 (상장 변경·데이터 오류 가능)"]})
     return new, exits
+
+
+def cause_counts(new, exits):
+    keys = [c.get("change_cause", "") for c in (new or [])] + [x["cause"] for x in (exits or [])]
+    out = {}
+    for k in keys:
+        k = k.split(" (")[0]
+        out[k] = out.get(k, 0) + 1
+    return out
 
 
 # ---------------- HTML ----------------
@@ -110,6 +189,17 @@ def _table(headers, rows):
     return "".join(out)
 
 
+CAUSE_COLOR = {"실적 반영": "#1F6F3F", "재무 수정 공시": "#7A5B00", "가격 변동": "#2E5597",
+               "기준 변경": "#777777", "유니버스 편입·이탈": "#555555"}
+
+
+def _cause_badge(cause):
+    if not cause:
+        return "–"
+    color = CAUSE_COLOR.get(cause.split(" (")[0], "#555555")
+    return f"<b style='color:{color}'>{_e(cause)}</b>"
+
+
 def _summary_line(c):
     bits = [f"{c['lane']}차선", f"매출 {_pct(c.get('rev_growth'), True)}"]
     if c.get("accel") is not None:
@@ -157,7 +247,11 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
     line = (f"유니버스 {stats['universe']:,}개 중 <b>{len(passed)}개 통과</b> (G {n_g} · C {n_c}), "
             f"1순위 후보(자동점수 {C.PRIORITY_SCORE_PCT:.0%} 이상) <b>{n_pri}개</b>.")
     if new is not None:
-        line += f" 전일({prev_day}) 대비 신규 <b>{len(new)}</b> · 이탈 <b>{len(exits)}</b>."
+        line += f" 전일({prev_day}) 대비 신규 <b>{len(new)}</b> · 이탈 <b>{len(exits)}</b>"
+        cc = cause_counts(new, exits)
+        if cc:
+            line += " (" + ", ".join(f"{k} {v}" for k, v in cc.items()) + ")"
+        line += "."
     else:
         line += " 첫 실행이라 전일 비교가 없습니다."
     parts.append(f"<p style='margin:6px 0 2px'>{line}</p>")
@@ -184,16 +278,18 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
         parts.append(f"<h2 {H2}>신규 진입 ({len(new)})</h2>")
         if new:
             rows = [[f"<b>{_e(c['ticker'])}</b> {_e((c.get('name') or '')[:28])}",
+                     _cause_badge(c.get("change_cause")),
                      f"{c.get('auto_score', 0):.0f}/{C.AUTO_SCORE_MAX}", _e(_summary_line(c))]
                     for c in sorted(new, key=lambda c: -(c.get('auto_score') or 0))[:C.MAX_ROWS_PER_SECTION]]
-            parts.append(_table(["종목", "자동점수", "진입 근거"], rows))
+            parts.append(_table(["종목", "변동 원인", "자동점수", "진입 근거"], rows))
         else:
             parts.append("<p style='font-size:12px;color:#666'>없음</p>")
         parts.append(f"<h2 {H2}>이탈 ({len(exits)})</h2>")
         if exits:
             rows = [[f"<b>{_e(x['ticker'])}</b>" + (" <span style='color:#C00000'>(보유)</span>" if x["ticker"] in holdings else ""),
-                     _e(x["name"][:28]), _e("; ".join(x["reasons"]))] for x in exits[:C.MAX_ROWS_PER_SECTION]]
-            parts.append(_table(["종목", "이름", "걸린 조건"], rows))
+                     _e(x["name"][:28]), _cause_badge(x.get("cause")), _e("; ".join(x["reasons"]))]
+                    for x in exits[:C.MAX_ROWS_PER_SECTION]]
+            parts.append(_table(["종목", "이름", "변동 원인", "걸린 조건"], rows))
         else:
             parts.append("<p style='font-size:12px;color:#666'>없음</p>")
 

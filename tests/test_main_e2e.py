@@ -88,6 +88,8 @@ def test_two_day_run(env, monkeypatch):
     html2 = (tmp / "out" / "latest.html").read_text(encoding="utf-8")
     assert "신규 진입 (1)" in html2 and "NEW" in html2
     assert "이탈 (1)" in html2 and "H1 희석" in html2
+    # 원인: NEW는 어제 없던 기업, GOOD은 같은 분기 재무가 바뀜(증자 반영)
+    assert "유니버스 편입·이탈" in html2 and "재무 수정 공시" in html2
     assert (tmp / "snapshots" / "2026-10-19.csv.gz").exists()
 
 

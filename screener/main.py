@@ -187,8 +187,10 @@ def main():
     res_df.insert(0, "date", today.isoformat())
     prev_day, prev_df = store.previous_results(today)
     res_path = store.save_results(today, res_df)
-    store.save_snapshot(today, report.to_frame(universe, report.SNAPSHOT_COLS))
-    new, exits = report.diff(passed, prev_df, companies)
+    snap = report.to_frame(universe, report.SNAPSHOT_COLS)
+    snap["criteria_version"] = C.CRITERIA_VERSION
+    store.save_snapshot(today, snap)
+    new, exits = report.diff(passed, prev_df, companies, store.load_snapshot(prev_day))
 
     # 8) 메일
     holdings = store.load_holdings()

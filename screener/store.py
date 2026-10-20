@@ -88,6 +88,14 @@ def save_run_summary(summary):
     return path
 
 
+def load_snapshot(day_str):
+    """해당 날짜 스냅샷(유니버스 전체 지표). 없으면 None."""
+    if not day_str:
+        return None
+    path = SNAPSHOTS / f"{day_str}.csv.gz"
+    return pd.read_csv(path) if path.exists() else None
+
+
 def load_holdings():
     p = Path(__file__).resolve().parent.parent / "config" / "holdings.txt"
     if not p.exists():
