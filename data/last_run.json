@@ -1,35 +1,79 @@
 {
- "run_at_utc": "2026-10-20T00:33:17+00:00",
- "screen_date": "2026-10-19",
+ "run_at_utc": "2026-10-21T00:05:02+00:00",
+ "screen_date": "2026-10-20",
  "max_companies": null,
- "targets": 6047,
+ "targets": 6046,
  "refreshed": {
   "new": 0,
-  "recent_filers": 7,
+  "recent_filers": 11,
   "stale": 0
  },
- "with_financials": 6047,
- "with_prices": 2169,
- "universe": 1234,
- "passed": 31,
+ "with_financials": 6046,
+ "with_prices": 2171,
+ "universe": 1233,
+ "passed": 30,
  "lanes": {
   "G": 12,
-  "C": 19
+  "C": 18
  },
  "priority": 6,
- "new": 11,
- "exits": 8,
+ "new": 1,
+ "exits": 2,
  "mail": "sent",
  "yahoo": {
-  "tickers": 31,
-  "errors": {},
-  "still_missing": [],
-  "filled_short_pct_float": 31,
-  "filled_pe_ttm": 30,
-  "filled_pe_fwd": 31,
-  "filled_peg": 15,
-  "filled_sector": 31,
-  "filled_industry": 31
+  "tickers": 30,
+  "errors": {
+   "v7_quote": {
+    "count": 1,
+    "first": "HTTPError: HTTP Error 401: "
+   },
+   "quoteSummary_pass1": {
+    "count": 30,
+    "first": "HTTPError: HTTP Error 401: "
+   },
+   "quoteSummary_pass2": {
+    "count": 30,
+    "first": "HTTPError: HTTP Error 401: "
+   }
+  },
+  "still_missing": [
+   "KLIC",
+   "AGX",
+   "GNTX",
+   "STAA",
+   "JOE",
+   "LSCC",
+   "VIAV",
+   "DAR",
+   "NWPX",
+   "INVX",
+   "PRDO",
+   "SWBI",
+   "AMN",
+   "CDNA",
+   "LZ",
+   "GNK",
+   "IRWD",
+   "COCO",
+   "CARG",
+   "LPG",
+   "NRDS",
+   "TTD",
+   "INSW",
+   "NMRK",
+   "HCC",
+   "ADEA",
+   "EE",
+   "MSGE",
+   "PACS",
+   "KRMN"
+  ],
+  "filled_short_pct_float": 0,
+  "filled_pe_ttm": 0,
+  "filled_pe_fwd": 0,
+  "filled_peg": 6,
+  "filled_sector": 0,
+  "filled_industry": 0
  },
- "sec_requests": 12
+ "sec_requests": 18
 }
