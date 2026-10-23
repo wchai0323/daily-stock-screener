@@ -59,11 +59,24 @@ def naver_flow():
     r = requests.get("https://finance.naver.com/sise/investorDealTrendDay.naver?bizdate=20261022&sosok=", headers=UA, timeout=30)
     return [r.status_code, len(r.text)]
 
-rec("github_models_catalog", models_catalog)
-for m in ["openai/gpt-4.1-mini", "openai/gpt-4o-mini", "openai/gpt-5-mini", "deepseek/deepseek-v3-0324"]:
-    rec("chat:" + m, models_chat(m))
-rec("fred", fred); rec("google_news", gnews); rec("google_news_ko", gnews_ko); rec("yahoo_rss", yrss)
-rec("yahoo_prices", yindex); rec("naver_kospi", naver_index); rec("naver_flow", naver_flow)
+
+def raw(method, url, **kw):
+    def f():
+        r = requests.request(method, url, timeout=60, **kw)
+        return {"status": r.status_code, "ctype": r.headers.get("content-type"), "url": r.url,
+                "hist": [h.status_code for h in r.history], "rl": {k: v for k, v in r.headers.items() if "ratelimit" in k.lower()},
+                "body": r.text[:700]}
+    return f
+H = {"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",
+     "Content-Type": "application/json"}
+body = {"model": "openai/gpt-4.1-mini", "messages": [{"role": "user", "content": "반도체 장비사의 공급망 제약 경고가 왜 주가에 악재인지 초보자에게 두 문장으로 설명해줘."}], "max_tokens": 300}
+out["token_len"] = len(tok)
+rec("catalog", raw("GET", "https://models.github.ai/catalog/models", headers=H))
+rec("chat_models_github_ai", raw("POST", "https://models.github.ai/inference/chat/completions", headers=H, json=body))
+b2 = dict(body, model="gpt-4o-mini")
+rec("chat_azure_legacy", raw("POST", "https://models.inference.ai.azure.com/chat/completions", headers=H, json=b2))
+rec("fred_one", raw("GET", "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFII10", headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36", "Accept": "text/csv,*/*"}))
+rec("treasury_xml", raw("GET", "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2026/all?type=daily_treasury_real_yield_curve&field_tdr_date_value=2026&page&_format=csv", headers=UA))
 os.makedirs("data", exist_ok=True)
 json.dump(out, open("data/probe.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-print(json.dumps(out, ensure_ascii=False, indent=1)[:3000])
+print(json.dumps(out, ensure_ascii=False, indent=1)[:4000])
