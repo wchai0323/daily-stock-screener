@@ -1,0 +1,92 @@
+{
+ "github_models_catalog": {
+  "ok": false,
+  "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+  "sec": 0.2
+ },
+ "chat:openai/gpt-4.1-mini": {
+  "ok": true,
+  "detail": {
+   "status": 200,
+   "headers": {},
+   "body": "OK\r\n"
+  },
+  "sec": 0.1
+ },
+ "chat:openai/gpt-4o-mini": {
+  "ok": true,
+  "detail": {
+   "status": 200,
+   "headers": {},
+   "body": "OK\r\n"
+  },
+  "sec": 0.1
+ },
+ "chat:openai/gpt-5-mini": {
+  "ok": true,
+  "detail": {
+   "status": 200,
+   "headers": {},
+   "body": "OK\r\n"
+  },
+  "sec": 0.1
+ },
+ "chat:deepseek/deepseek-v3-0324": {
+  "ok": true,
+  "detail": {
+   "status": 200,
+   "headers": {},
+   "body": "OK\r\n"
+  },
+  "sec": 0.1
+ },
+ "fred": {
+  "ok": false,
+  "error": "ReadTimeout: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=30)",
+  "sec": 30.2
+ },
+ "google_news": {
+  "ok": true,
+  "detail": [
+   100,
+   "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><rss version=\"2.0\" xmlns:media=\"http://search.yahoo.com/mrss/\"><channel><generator>NFE/5.0</generator><title>\"stock market when:1d\" - Google News"
+  ],
+  "sec": 0.6
+ },
+ "google_news_ko": {
+  "ok": true,
+  "detail": 99,
+  "sec": 0.5
+ },
+ "yahoo_rss": {
+  "ok": true,
+  "detail": 20,
+  "sec": 0.5
+ },
+ "yahoo_prices": {
+  "ok": true,
+  "detail": {
+   "^GSPC": 7663.43017578125,
+   "^VIX": 19.030000686645508,
+   "^VIX3M": null,
+   "SOXX": 475.69000244140625,
+   "KRW=X": 1325.0,
+   "CL=F": 100.30000305175781,
+   "BTC-USD": 81571.84375
+  },
+  "sec": 1.6
+ },
+ "naver_kospi": {
+  "ok": true,
+  "detail": "\n [['날짜', '시가', '고가', '저가', '종가', '거래량', '외국인소진율'],\n\n\t\n\t\t\n[\"20261015\", 5673.01, 5751.45, 5450.81, 5554.22, 385805, 0.0],\n\t\t\n[\"20261016\", 5653.99, 5809.94, 5590.33, 5668.05, 298850, 0.0],\n\t\t\n[\"20261019\", 5488.41, 5768.01, 5488.41, 5768.01, 292781, 0.0],\n\t\t\n[\"20261020\", 5733.57, 5733.57, 5493.24, 5552",
+  "sec": 1.0
+ },
+ "naver_flow": {
+  "ok": true,
+  "detail": [
+   410,
+   1499
+  ],
+  "sec": 1.0
+ }
+}
