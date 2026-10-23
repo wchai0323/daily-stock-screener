@@ -1,92 +1,49 @@
 {
- "github_models_catalog": {
-  "ok": false,
-  "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+ "token_len": 377,
+ "catalog": {
+  "ok": true,
+  "detail": {
+   "status": 200,
+   "ctype": "text/plain",
+   "url": "https://models.github.ai/catalog/models",
+   "hist": [],
+   "rl": {},
+   "body": "OK\r\n"
+  },
   "sec": 0.2
  },
- "chat:openai/gpt-4.1-mini": {
+ "chat_models_github_ai": {
   "ok": true,
   "detail": {
    "status": 200,
-   "headers": {},
+   "ctype": "text/plain",
+   "url": "https://models.github.ai/inference/chat/completions",
+   "hist": [],
+   "rl": {},
    "body": "OK\r\n"
   },
   "sec": 0.1
  },
- "chat:openai/gpt-4o-mini": {
-  "ok": true,
-  "detail": {
-   "status": 200,
-   "headers": {},
-   "body": "OK\r\n"
-  },
-  "sec": 0.1
- },
- "chat:openai/gpt-5-mini": {
-  "ok": true,
-  "detail": {
-   "status": 200,
-   "headers": {},
-   "body": "OK\r\n"
-  },
-  "sec": 0.1
- },
- "chat:deepseek/deepseek-v3-0324": {
-  "ok": true,
-  "detail": {
-   "status": 200,
-   "headers": {},
-   "body": "OK\r\n"
-  },
-  "sec": 0.1
- },
- "fred": {
+ "chat_azure_legacy": {
   "ok": false,
-  "error": "ReadTimeout: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=30)",
-  "sec": 30.2
+  "error": "ConnectionError: HTTPSConnectionPool(host='models.inference.ai.azure.com', port=443): Max retries exceeded with url: /chat/completions (Caused by NameResolutionError(\"HTTPSConnection(host='models.inference.ai.azure.com', port=443): Failed to resolve 'models.inference.ai.azure.com' ([Errno -2] Name or service not kno",
+  "sec": 0.0
  },
- "google_news": {
-  "ok": true,
-  "detail": [
-   100,
-   "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><rss version=\"2.0\" xmlns:media=\"http://search.yahoo.com/mrss/\"><channel><generator>NFE/5.0</generator><title>\"stock market when:1d\" - Google News"
-  ],
-  "sec": 0.6
+ "fred_one": {
+  "ok": false,
+  "error": "ReadTimeout: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)",
+  "sec": 60.2
  },
- "google_news_ko": {
-  "ok": true,
-  "detail": 99,
-  "sec": 0.5
- },
- "yahoo_rss": {
-  "ok": true,
-  "detail": 20,
-  "sec": 0.5
- },
- "yahoo_prices": {
+ "treasury_xml": {
   "ok": true,
   "detail": {
-   "^GSPC": 7663.43017578125,
-   "^VIX": 19.030000686645508,
-   "^VIX3M": null,
-   "SOXX": 475.69000244140625,
-   "KRW=X": 1325.0,
-   "CL=F": 100.30000305175781,
-   "BTC-USD": 81571.84375
+   "status": 200,
+   "ctype": "text/csv; charset=UTF-8",
+   "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2026/all?type=daily_treasury_real_yield_curve&field_tdr_date_value=2026&page&_format=csv",
+   "hist": [],
+   "rl": {},
+   "body": "Date,\"5 YR\",\"7 YR\",\"10 YR\",\"20 YR\",\"30 YR\"\n10/22/2026,2.33,2.48,2.64,2.91,3.05\n10/21/2026,2.55,2.65,2.76,3.01,3.15\n10/20/2026,2.55,2.65,2.77,3.02,3.16\n10/19/2026,2.56,2.67,2.80,3.06,3.21\n10/16/2026,2.52,2.62,2.74,3.01,3.16\n10/15/2026,2.58,2.67,2.78,3.03,3.18\n10/14/2026,2.64,2.73,2.84,3.09,3.24\n10/13/2026,2.67,2.77,2.88,3.13,3.28\n10/09/2026,2.68,2.79,2.91,3.17,3.32\n10/08/2026,2.62,2.74,2.87,3.15,3.31\n10/07/2026,2.66,2.78,2.92,3.20,3.36\n10/06/2026,2.66,2.77,2.91,3.19,3.35\n10/05/2026,2.70,2.82,2.95,3.22,3.37\n10/02/2026,2.69,2.80,2.92,3.19,3.34\n10/01/2026,2.65,2.76,2.88,3.16,3.31\n09/30/2026,2.73,2.82,2.93,3.18,3.33\n09/29/2026,2.72,2.80,2.91,3.15,3.29\n09/28/2026,2.73,2.80,2.90,3.14,3.28\n09/25/202"
   },
-  "sec": 1.6
- },
- "naver_kospi": {
-  "ok": true,
-  "detail": "\n [['날짜', '시가', '고가', '저가', '종가', '거래량', '외국인소진율'],\n\n\t\n\t\t\n[\"20261015\", 5673.01, 5751.45, 5450.81, 5554.22, 385805, 0.0],\n\t\t\n[\"20261016\", 5653.99, 5809.94, 5590.33, 5668.05, 298850, 0.0],\n\t\t\n[\"20261019\", 5488.41, 5768.01, 5488.41, 5768.01, 292781, 0.0],\n\t\t\n[\"20261020\", 5733.57, 5733.57, 5493.24, 5552",
-  "sec": 1.0
- },
- "naver_flow": {
-  "ok": true,
-  "detail": [
-   410,
-   1499
-  ],
-  "sec": 1.0
+  "sec": 0.3
  }
 }
