@@ -1,80 +1,35 @@
 {
- "run_at_utc": "2026-10-23T23:59:28+00:00",
- "screen_date": "2026-10-23",
+ "run_at_utc": "2026-10-27T00:44:39+00:00",
+ "screen_date": "2026-10-26",
  "max_companies": null,
  "targets": 6041,
  "refreshed": {
-  "new": 7,
-  "recent_filers": 109,
+  "new": 0,
+  "recent_filers": 137,
   "stale": 0
  },
  "with_financials": 6041,
- "with_prices": 2170,
- "universe": 1230,
- "passed": 31,
+ "with_prices": 2168,
+ "universe": 1229,
+ "passed": 29,
  "lanes": {
   "G": 12,
-  "C": 19
+  "C": 17
  },
  "priority": 5,
- "new": 2,
- "exits": 1,
+ "new": 0,
+ "exits": 2,
  "mail": "sent",
  "yahoo": {
-  "tickers": 31,
-  "errors": {
-   "v7_quote": {
-    "count": 1,
-    "first": "HTTPError: HTTP Error 401: "
-   },
-   "quoteSummary_pass1": {
-    "count": 31,
-    "first": "HTTPError: HTTP Error 401: "
-   },
-   "quoteSummary_pass2": {
-    "count": 31,
-    "first": "HTTPError: HTTP Error 401: "
-   }
-  },
-  "still_missing": [
-   "KLIC",
-   "AGX",
-   "GNTX",
-   "STAA",
-   "JOE",
-   "LSCC",
-   "VIAV",
-   "DAR",
-   "NWPX",
-   "INVX",
-   "PRDO",
-   "SWBI",
-   "AMN",
-   "CDNA",
-   "LZ",
-   "GNK",
-   "IRWD",
-   "MTSI",
-   "CARG",
-   "LPG",
-   "NRDS",
-   "TTD",
-   "INSW",
-   "NMRK",
-   "HCC",
-   "ADEA",
-   "GCT",
-   "EE",
-   "MSGE",
-   "PACS",
-   "KRMN"
-  ],
-  "filled_short_pct_float": 0,
-  "filled_pe_ttm": 0,
-  "filled_pe_fwd": 0,
-  "filled_peg": 3,
-  "filled_sector": 0,
-  "filled_industry": 0
+  "tickers": 29,
+  "errors": {},
+  "still_missing": [],
+  "filled_short_pct_float": 29,
+  "filled_pe_ttm": 28,
+  "filled_pe_fwd": 29,
+  "filled_peg": 15,
+  "filled_sector": 29,
+  "filled_industry": 29
  },
- "sec_requests": 126
+ "sec_requests": 145
 }
