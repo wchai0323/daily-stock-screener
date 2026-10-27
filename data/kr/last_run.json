@@ -1,18 +1,18 @@
 {
- "run_at_utc": "2026-10-26T14:32:00+00:00",
- "screen_date": "2026-10-26",
+ "run_at_utc": "2026-10-27T13:32:13+00:00",
+ "screen_date": "2026-10-27",
  "dart_corps_with_stock_code": 3935,
  "with_prices": 2581,
- "liquid_candidates": 848,
- "with_8q_financials": 742,
- "universe": 554,
+ "liquid_candidates": 844,
+ "with_8q_financials": 740,
+ "universe": 558,
  "passed": 35,
  "lanes": {
   "G": 18,
   "C": 17
  },
- "new": 1,
- "exits": 2,
+ "new": 0,
+ "exits": 0,
  "listed_now": 2585,
  "prices": {
   "requested": 2585,
@@ -23,7 +23,7 @@
   "yahoo_fallback_ok": 0,
   "received": 2581
  },
- "dart_calls": 47,
+ "dart_calls": 390,
  "dart_budget_hit": null,
  "mail": "sent",
  "yahoo": {
