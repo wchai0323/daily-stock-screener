@@ -1,35 +1,35 @@
 {
- "run_at_utc": "2026-10-28T00:42:02+00:00",
- "screen_date": "2026-10-27",
+ "run_at_utc": "2026-10-29T01:11:48+00:00",
+ "screen_date": "2026-10-28",
  "max_companies": null,
  "targets": 6036,
  "refreshed": {
   "new": 0,
-  "recent_filers": 68,
+  "recent_filers": 103,
   "stale": 0
  },
  "with_financials": 6036,
- "with_prices": 2167,
- "universe": 1228,
- "passed": 28,
+ "with_prices": 2168,
+ "universe": 1232,
+ "passed": 26,
  "lanes": {
-  "G": 12,
-  "C": 16
+  "G": 11,
+  "C": 15
  },
  "priority": 5,
  "new": 0,
- "exits": 1,
+ "exits": 2,
  "mail": "sent",
  "yahoo": {
-  "tickers": 28,
+  "tickers": 26,
   "errors": {},
   "still_missing": [],
-  "filled_short_pct_float": 28,
-  "filled_pe_ttm": 27,
-  "filled_pe_fwd": 28,
-  "filled_peg": 16,
-  "filled_sector": 28,
-  "filled_industry": 28
+  "filled_short_pct_float": 26,
+  "filled_pe_ttm": 25,
+  "filled_pe_fwd": 26,
+  "filled_peg": 14,
+  "filled_sector": 26,
+  "filled_industry": 26
  },
- "sec_requests": 74
+ "sec_requests": 110
 }
