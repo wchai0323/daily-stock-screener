@@ -1,29 +1,29 @@
 {
- "run_at_utc": "2026-10-28T14:21:46+00:00",
- "screen_date": "2026-10-28",
+ "run_at_utc": "2026-10-29T14:39:30+00:00",
+ "screen_date": "2026-10-29",
  "dart_corps_with_stock_code": 3935,
- "with_prices": 2582,
- "liquid_candidates": 844,
- "with_8q_financials": 739,
- "universe": 562,
+ "with_prices": 2583,
+ "liquid_candidates": 843,
+ "with_8q_financials": 740,
+ "universe": 561,
  "passed": 34,
  "lanes": {
-  "G": 18,
-  "C": 16
+  "G": 17,
+  "C": 17
  },
- "new": 0,
- "exits": 1,
+ "new": 2,
+ "exits": 2,
  "listed_now": 2585,
  "prices": {
   "requested": 2585,
-  "naver_ok": 2582,
+  "naver_ok": 2583,
   "naver_errors": 0,
   "naver_first_error": null,
-  "yahoo_fallback_requested": 3,
+  "yahoo_fallback_requested": 2,
   "yahoo_fallback_ok": 0,
-  "received": 2582
+  "received": 2583
  },
- "dart_calls": 82,
+ "dart_calls": 100,
  "dart_budget_hit": null,
  "mail": "sent",
  "yahoo": {
@@ -31,10 +31,10 @@
   "errors": {},
   "still_missing": [
    "080220.KQ",
-   "237690.KQ",
    "085910.KQ",
    "102710.KQ",
-   "030520.KQ"
+   "030520.KQ",
+   "079940.KQ"
   ],
   "filled_short_pct_float": 0,
   "filled_pe_ttm": 0,
