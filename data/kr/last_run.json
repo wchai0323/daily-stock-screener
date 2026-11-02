@@ -1,33 +1,33 @@
 {
- "run_at_utc": "2026-10-30T14:30:25+00:00",
- "screen_date": "2026-10-30",
- "dart_corps_with_stock_code": 3935,
+ "run_at_utc": "2026-11-02T17:24:40+00:00",
+ "screen_date": "2026-11-03",
+ "dart_corps_with_stock_code": 3937,
  "with_prices": 2584,
- "liquid_candidates": 840,
- "with_8q_financials": 735,
- "universe": 556,
- "passed": 36,
+ "liquid_candidates": 836,
+ "with_8q_financials": 730,
+ "universe": 560,
+ "passed": 35,
  "lanes": {
   "G": 18,
-  "C": 18
+  "C": 17
  },
- "new": 2,
- "exits": 0,
- "listed_now": 2585,
+ "new": 0,
+ "exits": 1,
+ "listed_now": 2587,
  "prices": {
-  "requested": 2585,
+  "requested": 2587,
   "naver_ok": 2584,
   "naver_errors": 0,
   "naver_first_error": null,
-  "yahoo_fallback_requested": 1,
+  "yahoo_fallback_requested": 3,
   "yahoo_fallback_ok": 0,
   "received": 2584
  },
- "dart_calls": 83,
+ "dart_calls": 375,
  "dart_budget_hit": null,
  "mail": "sent",
  "yahoo": {
-  "tickers": 36,
+  "tickers": 35,
   "errors": {},
   "still_missing": [
    "080220.KQ",
@@ -39,9 +39,9 @@
   ],
   "filled_short_pct_float": 0,
   "filled_pe_ttm": 0,
-  "filled_pe_fwd": 24,
+  "filled_pe_fwd": 23,
   "filled_peg": 1,
-  "filled_sector": 30,
-  "filled_industry": 30
+  "filled_sector": 29,
+  "filled_industry": 29
  }
 }
