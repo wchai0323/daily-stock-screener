@@ -314,3 +314,25 @@ def test_change_cause_classification():
     # 재무·가격이 같은데 결과가 다름 → 기준 변경
     assert report.change_cause(good, dict(base)) == "기준 변경"
     assert report.change_cause(good, None) == "유니버스 편입·이탈"
+
+
+def test_normalized_pe_sec_and_compute():
+    from screener import normalized
+    comp = {"concepts": {"NetIncomeLoss": [
+        [f"{y}-01-01", f"{y}-12-31", 100.0 * (y - 2014), f"{y + 1}-02-20", "a"] for y in range(2015, 2026)
+    ] + [["2025-07-01", "2025-09-30", 999.0, "2025-11-01", "q"],          # 분기값은 무시
+         ["2024-01-01", "2024-12-31", 1000.0, "2026-02-20", "restated"]]}}  # 재작성값이 우선
+    annual = normalized.annual_net_income_sec(comp)
+    assert len(annual) == 11 and annual["2024-12-31"] == 1000.0
+    pe, n, avg = normalized.compute(10_000.0, annual)
+    vals = [100.0 * (y - 2014) for y in range(2016, 2026)]
+    vals[vals.index(1000.0)] = 1000.0
+    assert n == 10 and abs(avg - sum(vals) / 10) < 1e-9 and abs(pe - 10_000.0 / avg) < 1e-9
+    assert normalized.compute(1e4, {"2024": 1, "2025": 2})[0] is None          # 5년 미만
+    assert normalized.compute(1e4, {str(y): -5 for y in range(2019, 2026)})[0] is None   # 평균 적자
+
+
+def test_normalized_pe_cell():
+    from screener import report
+    assert "8년" in report._valuation({"pe_ttm": 10.0, "pe_norm": 14.2, "pe_norm_years": 8})
+    assert "평균적자" in report._valuation({"pe_ttm": 10.0, "pe_norm": None, "pe_norm_years": 7, "ni_norm_avg": -3})

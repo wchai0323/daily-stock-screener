@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from . import config as C
+from . import normalized, config as C
 from . import facts, metrics, prices, report, screen, sectors, store
 from .sec import SecClient
 
@@ -166,6 +166,8 @@ def main():
                 log(f"  CIK {c['cik']} 순이익 보강 실패: {e}")
         m2 = metrics.compute(facts.build_series(obj["compact"])) if obj else None
         c["net_income_ttm"] = (m2 or {}).get("net_income_ttm")
+        annual = normalized.annual_net_income_sec(obj["compact"]) if obj else {}
+        c["pe_norm"], c["pe_norm_years"], c["ni_norm_avg"] = normalized.compute(c.get("mkt_cap"), annual)
     if upgraded:
         log(f"순이익 보강 {upgraded}개")
 

@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 # 한국 결과는 data/kr 아래에 따로 쌓는다 (store가 import될 때 경로를 정하므로 먼저 설정)
 os.environ.setdefault("SCREENER_DATA_DIR", str(Path(__file__).resolve().parent.parent / "data" / "kr"))
 
-from . import dart, facts, kr_prices, markets, metrics, prices, report, screen, store  # noqa: E402
+from . import normalized, dart, facts, kr_prices, markets, metrics, prices, report, screen, store  # noqa: E402
 from . import kr_config as K  # noqa: E402
 from . import kr_rules as R  # noqa: E402
 
@@ -128,6 +128,31 @@ def fetch_report(client, cc, obj, year, code, today):
     obj["reports"][key] = {"status": "ok", "checked": today.isoformat(), "rcept_no": rcept, "fs": used,
                            "rows": dart.to_compact_rows(year, code, parsed, rcept)}
     return True
+
+
+def refresh_annual_ni(client, cc, obj, schedule):
+    """정상화 PER용 연간 순이익 (최대 9~10년). 사업보고서 1건에 3개 연도가 들어 있어
+    최신 사업보고서 연도 Y와 Y-3, Y-6, Y-9를 받는다. 최신 사업보고서가 바뀔 때만 다시 받는다."""
+    annual_ok = [y for y, cd in schedule if cd == "11011"
+                 and (obj["reports"].get(dart.report_key(y, cd)) or {}).get("status") == "ok"]
+    if not annual_ok:
+        return (obj.get("annual_ni") or {}).get("years", {})
+    latest = max(annual_ok)
+    cache = obj.get("annual_ni") or {}
+    if cache.get("latest_fy") == latest:
+        return cache.get("years", {})
+    fs = obj.get("fs_div") or "CFS"
+    years = {}
+    for y in (latest, latest - 3, latest - 6, latest - 9):
+        if y < 2015:                     # DART 재무 API는 2015년 사업연도부터
+            break
+        rows = client.financials(cc, y, "11011", fs)
+        if not rows or any((r.get("currency") or "KRW") != "KRW" for r in rows[:5]):
+            break
+        for yy, v in dart.parse_annual_net_income(rows, y).items():
+            years.setdefault(str(yy), v)          # 최신 보고서 값(재작성 반영)을 우선
+    obj["annual_ni"] = {"latest_fy": latest, "years": years}
+    return years
 
 
 def refresh_holders(client, cc, obj, schedule, today):
@@ -358,6 +383,18 @@ def main():
     universe = screen.run(companies)
     passed = [c for c in universe if c["pass"]]
     log(f"유니버스 {len(universe):,} → 1층 통과 {len(passed)}")
+    # 정상화 PER: 통과 종목만 연간 순이익 이력을 받는다 (종목당 최대 4건, 사업보고서가 바뀔 때만)
+    norm_calls = client.count
+    for c in passed:
+        obj = load_corp(c["cik"])
+        try:
+            annual = refresh_annual_ni(client, c["cik"], obj, schedule)
+            save_corp(c["cik"], obj)
+        except (dart.BudgetExceeded, dart.DartError) as e:
+            log(f"  {c['cik']} 연간 순이익 수집 실패: {e}")
+            annual = (obj.get("annual_ni") or {}).get("years", {})
+        c["pe_norm"], c["pe_norm_years"], c["ni_norm_avg"] = normalized.compute(c.get("mkt_cap"), annual)
+    log(f"정상화 PER 연간 이익 수집 DART {client.count - norm_calls}건")
     qi, yahoo_diag = prices.fetch_quote_info([c["ticker"] for c in passed])
     for c in passed:
         y = qi.get(c["ticker"]) or prices.parse_info({})

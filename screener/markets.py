@@ -62,7 +62,7 @@ US = types.SimpleNamespace(
     USE_SHORT=True,
     INDUSTRY_LABEL="같은 업종(SIC)",
     SOURCE_NOTE="재무는 SEC 10-Q/10-K 공시 기준이라 실적 발표 후 공시까지 며칠~수주 늦을 수 있음",
-    VALUATION_NOTE=("TTM PER·PSR은 SEC 재무로 계산, Forward PER·PEG는 Yahoo 컨센서스(조회 실패 시 –). "
+    VALUATION_NOTE=("TTM PER·PSR은 SEC 재무로 계산, 정상화 PER은 시가총액 ÷ 최근 최대 10개 회계연도 평균 순이익(5년 미만이면 –, 사이클 정점 착시 보정용), Forward PER·PEG는 Yahoo 컨센서스(조회 실패 시 –). "
                     "섹터·업종은 SEC 업종 분류(SIC)."),
     universe_extra=_us_universe_extra,
     extra_hard=lambda c: [],
@@ -87,7 +87,7 @@ def korea():
         USE_SHORT=False,
         INDUSTRY_LABEL="같은 업종(KSIC)",
         SOURCE_NOTE="재무는 DART 정기보고서 기준이라 잠정실적 공시보다 늦게 반영됨",
-        VALUATION_NOTE=("TTM PER·PSR은 DART 재무로 계산, Forward PER·PEG는 Yahoo 컨센서스(대부분 대형주만, 조회 실패 시 –). "
+        VALUATION_NOTE=("TTM PER·PSR은 DART 재무로 계산, 정상화 PER은 시가총액 ÷ 2015년 이후 최대 10개 연도 평균 지배주주 순이익(5년 미만이면 –), Forward PER·PEG는 Yahoo 컨센서스(대부분 대형주만, 조회 실패 시 –). "
                         "섹터·업종은 KSIC 분류."),
         universe_extra=R.universe_extra,
         extra_hard=R.extra_hard,

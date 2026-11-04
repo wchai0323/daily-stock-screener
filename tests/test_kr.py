@@ -181,7 +181,10 @@ def test_kr_main_end_to_end(kr_env, monkeypatch):
             if fs != "CFS":
                 return None
             v = corps[cc]
-            return fake_statement(year, code, rev_map(v[4]), mezz=v[5])
+            try:
+                return fake_statement(year, code, rev_map(v[4]), mezz=v[5])
+            except KeyError:          # 일정 밖 연도(정상화 PER용 과거 사업보고서)는 없음으로
+                return None
 
         def shares(self, cc, year, code):
             return 10_000_000
@@ -234,3 +237,12 @@ def test_parse_naver_sise():
     df = kr_prices.parse_naver(text)
     assert list(df["Close"]) == [45000, 45500] and str(df.index[-1].date()) == "2026-10-19"
     assert prices.summarize(df) is None          # 20일 미만이면 요약하지 않음
+
+
+def test_dart_annual_net_income():
+    rows = [{"sj_div": "CIS", "account_id": "ifrs-full_ProfitLossAttributableToOwnersOfParent", "account_nm": "지배",
+             "thstrm_amount": "1,000", "frmtrm_amount": "800", "bfefrmtrm_amount": "(200)"},
+            {"sj_div": "CIS", "account_id": "ifrs-full_ProfitLoss", "account_nm": "당기순이익",
+             "thstrm_amount": "1,100", "frmtrm_amount": "900", "bfefrmtrm_amount": "-100"}]
+    out = dart.parse_annual_net_income(rows, 2025)
+    assert out[2025] == 1000 and out[2024] == 800 and out[2023] == -200

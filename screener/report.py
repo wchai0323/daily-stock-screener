@@ -7,7 +7,7 @@ import pandas as pd
 
 RESULT_COLS = [
     "ticker", "name", "sector", "industry", "lane", "auto_score", "auto_score_pct", "priority", "mkt_cap",
-    "pe_ttm", "pe_fwd", "peg", "psr", "net_income_ttm", "rev_growth", "q_yoy",
+    "pe_ttm", "pe_fwd", "pe_norm", "pe_norm_years", "peg", "psr", "net_income_ttm", "rev_growth", "q_yoy",
     "accel", "gpm", "ind_gpm_median", "opm", "opm_change", "fcf_margin", "fcf_yield", "dilution",
     "net_debt_ebitda", "runway_months", "rule_of_40", "short_pct_float", "price", "range_pos", "ma200_gap",
     "entry_tags", "period_end", "latest_filed", "ind_group", "sic",
@@ -169,8 +169,18 @@ def _valuation(c):
     ni = c.get("net_income_ttm")
     if pe_ttm == "–" and ((ni is not None and ni <= 0) or (ni is None and (c.get("opm") or 0) < 0)):
         pe_ttm = "적자"
-    return (f"PER {pe_ttm} / {_x(c.get('pe_fwd'))}<br>"
+    return (f"PER {pe_ttm} / {_x(c.get('pe_fwd'))} / {_norm(c)}<br>"
             f"<span style='color:#666'>PEG {_x(c.get('peg'), 2)} · PSR {_x(c.get('psr'))}</span>")
+
+
+def _norm(c):
+    """정상화 PER: '14.2(8년)', 평균 적자면 '평균적자', 5년 미만이면 '–'."""
+    pe, n, avg = c.get("pe_norm"), c.get("pe_norm_years") or 0, c.get("ni_norm_avg")
+    if _x(pe) != "–":
+        return f"{_x(pe)}<span style='color:#888;font-size:11px'>({int(n)}년)</span>"
+    if avg is not None and avg <= 0:
+        return "평균적자"
+    return "–"
 
 
 def _class(c):
@@ -238,7 +248,7 @@ def _cand_rows(cands, holdings):
     return rows
 
 
-CAND_HEAD = ["종목", "섹터 / 업종", "차선", "자동점수", "시총", "PER TTM/Fwd · PEG · PSR", "매출 YoY", "가속",
+CAND_HEAD = ["종목", "섹터 / 업종", "차선", "자동점수", "시총", "PER TTM / Fwd / 정상화 · PEG · PSR", "매출 YoY", "가속",
              "매출총이익률", "영업이익률", "희석", "진입 참고"]
 
 

@@ -182,6 +182,8 @@ def _amount(v):
     s = str(v).replace(",", "").strip()
     if s in ("", "-"):
         return None
+    if s.startswith("(") and s.endswith(")"):      # (200) 표기 음수
+        s = "-" + s[1:-1]
     try:
         return float(s)
     except ValueError:
@@ -316,6 +318,24 @@ def parse_statement(rows):
     out.pop("ni_owner", None)
     out.pop("ni_total", None)
     return out
+
+
+def parse_annual_net_income(rows, year):
+    """사업보고서(11011) 손익계산서 → {연도: 순이익}. 당기·전기·전전기 3개 연도. 지배주주 귀속 우선."""
+    is_rows = [r for r in rows or [] if r.get("sj_div") in ("IS", "CIS")]
+    for concept in ("ni_owner", "ni_total"):
+        ids, names = SINGLE[concept]
+        r = next((r for r in is_rows if _match(r, ids, names)), None)
+        if not r:
+            continue
+        out = {}
+        for k, y in (("thstrm_amount", year), ("frmtrm_amount", year - 1), ("bfefrmtrm_amount", year - 2)):
+            v = _amount(r.get(k))
+            if v is not None:
+                out[y] = v
+        if out:
+            return out
+    return {}
 
 
 def parse_common_shares(rows):
