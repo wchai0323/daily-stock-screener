@@ -1,0 +1,51 @@
+name: Finder - KR business sections
+
+# finder-themes 브랜치에서만 동작. 기존 일일 스크리닝(main)과 무관.
+on:
+  push:
+    branches: [finder-themes]
+    paths:
+      - "tools/finder_business.py"
+      - ".github/workflows/finder_business.yml"
+      - "tools/finder_run.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finder-business
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: 사업의 내용 수집
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          MAX_COMPANIES=$(grep -oP '^max=\K\d*' tools/finder_run.txt || true) \
+          DEADLINE_MIN=300 python tools/finder_business.py 2>&1 | tee data/finder_business.log
+          mv data/finder_business.log data/finder/ || true
+
+      - name: 결과 커밋
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/finder
+          if ! git diff --cached --quiet; then
+            git commit -m "finder: KR business sections $(TZ=Asia/Seoul date +%F-%H%M)"
+            git pull --rebase
+            git push
+          fi
