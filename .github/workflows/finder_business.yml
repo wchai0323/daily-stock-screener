@@ -35,6 +35,7 @@ jobs:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: |
           MAX_COMPANIES=$(grep -oP '^max=\K\d*' tools/finder_run.txt || true) \
+          FORCE=$(grep -oP "^force=\K\d" tools/finder_run.txt || true) \
           DEADLINE_MIN=300 python tools/finder_business.py 2>&1 | tee data/finder_business.log
           mv data/finder_business.log data/finder/ || true
 

@@ -1,13 +1,9 @@
 name: Finder - KR theme tagging
 
-# finder-themes 브랜치에서만 동작. tools/finder_tag_run.txt 를 바꿔 커밋하면 다시 실행된다.
+# 보류: GitHub Models가 Actions에서 실제 응답을 주지 않음(본문 "OK"만 반환). 태깅은 Claude 세션에서 한다.
+# 유료 API(ANTHROPIC_API_KEY)로 돌릴 때 수동 실행용으로 남겨 둔다.
 on:
-  push:
-    branches: [finder-themes]
-    paths:
-      - "tools/finder_tag.py"
-      - "tools/finder_tag_run.txt"
-      - "config/finder_themes.json"
+  workflow_dispatch:
 
 permissions:
   contents: write

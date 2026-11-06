@@ -76,7 +76,8 @@ def decode(b):
 
 def _table(m):
     """표 안의 줄바꿈 태그를 없애고 한 행을 'a | b | c' 한 줄로 만든다."""
-    t = re.sub(r"(?is)<(P|BR|SPAN)[^>]*>|</(P|SPAN)>", " ", m.group(0))
+    t = re.sub(r"\s+", " ", m.group(0))                       # 원문 XML 줄바꿈 제거
+    t = re.sub(r"(?is)<(P|BR|SPAN)[^>]*>|</(P|SPAN)>", " ", t)
     t = re.sub(r"(?is)<TR[^>]*>", "\n", t)
     t = re.sub(r"(?is)<(TD|TH|TE|TU)[^>]*>", " | ", t)
     return t
@@ -161,7 +162,8 @@ def main():
 
     targets = annual_filings(client, today)
     log(f"최근 사업보고서 제출 상장사 {len(targets)}곳")
-    todo = [rs for s, rs in sorted(targets.items()) if not os.path.exists(f"{OUT}/{s}.json")]
+    force = os.environ.get("FORCE") == "1"                     # 파서 수정 후 전체 다시 받기
+    todo = [rs for s, rs in sorted(targets.items()) if force or not os.path.exists(f"{OUT}/{s}.json")]
     mx = os.environ.get("MAX_COMPANIES")
     if mx:
         todo = todo[: int(mx)]
