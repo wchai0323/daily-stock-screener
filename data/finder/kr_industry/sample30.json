@@ -1,0 +1,272 @@
+[
+ {
+  "code": "005930",
+  "name": "삼성전자",
+  "main": "device",
+  "main_share": 56.3,
+  "sub": "semi_mem",
+  "sub_share": 39.0,
+  "basis": "DX 부문 56.3%, DS 부문 39%"
+ },
+ {
+  "code": "000660",
+  "name": "SK하이닉스",
+  "main": "semi_mem",
+  "main_share": 100,
+  "sub": null,
+  "sub_share": null,
+  "basis": "DRAM, NAND 100%"
+ },
+ {
+  "code": "042700",
+  "name": "한미반도체",
+  "main": "semi_be",
+  "main_share": 100,
+  "sub": null,
+  "sub_share": null,
+  "basis": "HBM TC본더 등 반도체 제조용 장비"
+ },
+ {
+  "code": "007660",
+  "name": "이수페타시스",
+  "main": "pcb",
+  "main_share": 95.1,
+  "sub": null,
+  "sub_share": null,
+  "basis": "고다층 PCB 95%"
+ },
+ {
+  "code": "298040",
+  "name": "효성중공업",
+  "main": "grid",
+  "main_share": 69.5,
+  "sub": null,
+  "sub_share": null,
+  "basis": "변압기·차단기 등 69.5%, 건설 29.9%"
+ },
+ {
+  "code": "034020",
+  "name": "두산에너빌리티",
+  "main": "heavy",
+  "main_share": 51.5,
+  "sub": "nuclear",
+  "sub_share": 45.7,
+  "basis": "두산밥캣 51.5%, 원전·발전설비 45.7%"
+ },
+ {
+  "code": "012450",
+  "name": "한화에어로스페이스",
+  "main": "shipbuild",
+  "main_share": 54.5,
+  "sub": "defense",
+  "sub_share": 38.9,
+  "basis": "해양(한화오션) 54.5%, 방산 38.9%"
+ },
+ {
+  "code": "079550",
+  "name": "LIG디펜스앤에어로스페이스",
+  "main": "defense",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "정밀유도무기·감시정찰 등"
+ },
+ {
+  "code": "277810",
+  "name": "레인보우로보틱스",
+  "main": "robot",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "협동로봇·휴머노이드"
+ },
+ {
+  "code": "196170",
+  "name": "알테오젠",
+  "main": "platform_bio",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "히알루로니다제 기술수출 수익"
+ },
+ {
+  "code": "214450",
+  "name": "파마리서치",
+  "main": "aesthetic",
+  "main_share": 58.6,
+  "sub": null,
+  "sub_share": null,
+  "basis": "의료기기(리쥬란) 58.6%, 화장품 24.6%"
+ },
+ {
+  "code": "352820",
+  "name": "하이브",
+  "main": "music",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "음반·공연·MD 등"
+ },
+ {
+  "code": "035420",
+  "name": "NAVER",
+  "main": "platform",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "검색·커머스 광고"
+ },
+ {
+  "code": "377300",
+  "name": "카카오페이",
+  "main": "card",
+  "main_share": 100,
+  "sub": null,
+  "sub_share": null,
+  "basis": "결제 54%, 금융서비스 40%"
+ },
+ {
+  "code": "094280",
+  "name": "효성 ITX",
+  "main": "hr",
+  "main_share": 75.2,
+  "sub": null,
+  "sub_share": null,
+  "basis": "컨택센터 서비스 75.2%"
+ },
+ {
+  "code": "028050",
+  "name": "삼성E&A",
+  "main": "construction",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "화공·첨단산업 플랜트 EPC"
+ },
+ {
+  "code": "159910",
+  "name": "에코글로우",
+  "main": "cos_odm",
+  "main_share": 95.4,
+  "sub": null,
+  "sub_share": null,
+  "basis": "화장품 OEM·ODM 제조"
+ },
+ {
+  "code": "004450",
+  "name": "삼화왕관",
+  "main": "paper",
+  "main_share": 72.5,
+  "sub": null,
+  "sub_share": null,
+  "basis": "병마개(Cap) 72.5%"
+ },
+ {
+  "code": "007390",
+  "name": "네이처셀",
+  "main": "newdrug",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "줄기세포치료제 개발"
+ },
+ {
+  "code": "353810",
+  "name": "이지바이오",
+  "main": "feed",
+  "main_share": 100,
+  "sub": null,
+  "sub_share": null,
+  "basis": "사료첨가제 78%, 배합사료 22%"
+ },
+ {
+  "code": "011090",
+  "name": "에넥스",
+  "main": "furniture",
+  "main_share": 98.2,
+  "sub": null,
+  "sub_share": null,
+  "basis": "주방가구·붙박이장"
+ },
+ {
+  "code": "123040",
+  "name": "엠에스오토텍",
+  "main": "autoparts",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "자동차 차체 부품"
+ },
+ {
+  "code": "444530",
+  "name": "심플랫폼",
+  "main": "ai_data",
+  "main_share": 100,
+  "sub": null,
+  "sub_share": null,
+  "basis": "산업용 AX 플랫폼 100%"
+ },
+ {
+  "code": "005670",
+  "name": "푸드웰",
+  "main": "procfood",
+  "main_share": 100,
+  "sub": null,
+  "sub_share": null,
+  "basis": "만두·잼·통조림 등 식품 제조"
+ },
+ {
+  "code": "310870",
+  "name": "디와이씨",
+  "main": "autoparts",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "샤프트·플랜지 등 구동 부품"
+ },
+ {
+  "code": "048770",
+  "name": "TPC로보틱스",
+  "main": "robot",
+  "main_share": 100,
+  "sub": null,
+  "sub_share": null,
+  "basis": "공압 기기 81.9%, 직교로봇 18.1%"
+ },
+ {
+  "code": "003310",
+  "name": "대주산업",
+  "main": "feed",
+  "main_share": 99.4,
+  "sub": null,
+  "sub_share": null,
+  "basis": "배합사료 99.4%"
+ },
+ {
+  "code": "009620",
+  "name": "삼보산업",
+  "main": "nonferrous",
+  "main_share": 98.9,
+  "sub": null,
+  "sub_share": null,
+  "basis": "알루미늄 합금괴 98.9%"
+ },
+ {
+  "code": "215200",
+  "name": "메가스터디교육",
+  "main": "edu",
+  "main_share": null,
+  "sub": null,
+  "sub_share": null,
+  "basis": "온라인·학원 강의"
+ },
+ {
+  "code": "199480",
+  "name": "뱅크웨어글로벌",
+  "main": "itsvc",
+  "main_share": 100,
+  "sub": null,
+  "sub_share": null,
+  "basis": "금융 SW 구축 49%, 운영 26%, SW 25%"
+ }
+]

@@ -1,0 +1,514 @@
+{
+ "version": "kr-ind-0.2",
+ "rule": "회사당 소업종 1개. 주요 제품 매출 비중 표의 최대 매출 품목 기준(연결). 표가 없으면 사업의 개요 서술. 지주회사는 순수지주(자회사 관리·배당이 주 수익)만 holding, 사업지주는 연결 최대 사업으로. 두 번째 사업이 연결 매출의 30% 이상이면 부업종 1개를 함께 기록한다.",
+ "groups": [
+  {
+   "id": "semi",
+   "name": "반도체",
+   "subs": [
+    {
+     "id": "semi_mem",
+     "name": "메모리"
+    },
+    {
+     "id": "semi_eq",
+     "name": "장비(전공정)"
+    },
+    {
+     "id": "semi_be",
+     "name": "후공정·테스트"
+    },
+    {
+     "id": "semi_mat",
+     "name": "소재·부품"
+    },
+    {
+     "id": "semi_fab",
+     "name": "팹리스·파운드리"
+    }
+   ]
+  },
+  {
+   "id": "elec",
+   "name": "IT부품·전자",
+   "subs": [
+    {
+     "id": "display",
+     "name": "디스플레이"
+    },
+    {
+     "id": "pcb",
+     "name": "PCB·기판"
+    },
+    {
+     "id": "ecomp",
+     "name": "전자부품"
+    },
+    {
+     "id": "device",
+     "name": "가전·IT기기"
+    },
+    {
+     "id": "netcom",
+     "name": "통신·네트워크 장비"
+    }
+   ]
+  },
+  {
+   "id": "sw",
+   "name": "소프트웨어·인터넷",
+   "subs": [
+    {
+     "id": "platform",
+     "name": "인터넷 플랫폼"
+    },
+    {
+     "id": "game",
+     "name": "게임"
+    },
+    {
+     "id": "itsvc",
+     "name": "기업용 SW·IT서비스"
+    },
+    {
+     "id": "security",
+     "name": "보안"
+    },
+    {
+     "id": "ai_data",
+     "name": "AI·데이터"
+    }
+   ]
+  },
+  {
+   "id": "battery",
+   "name": "2차전지",
+   "subs": [
+    {
+     "id": "bat_cell",
+     "name": "셀"
+    },
+    {
+     "id": "bat_mat",
+     "name": "소재"
+    },
+    {
+     "id": "bat_eq",
+     "name": "장비"
+    }
+   ]
+  },
+  {
+   "id": "power_eq",
+   "name": "전력·에너지 장비",
+   "subs": [
+    {
+     "id": "grid",
+     "name": "전력기기·전선"
+    },
+    {
+     "id": "nuclear",
+     "name": "원전"
+    },
+    {
+     "id": "renew",
+     "name": "신재생·수소"
+    }
+   ]
+  },
+  {
+   "id": "ship",
+   "name": "조선",
+   "subs": [
+    {
+     "id": "shipbuild",
+     "name": "조선"
+    },
+    {
+     "id": "ship_parts",
+     "name": "조선기자재"
+    }
+   ]
+  },
+  {
+   "id": "defense",
+   "name": "방산·항공우주",
+   "subs": [
+    {
+     "id": "defense",
+     "name": "방산"
+    },
+    {
+     "id": "aero",
+     "name": "항공·우주"
+    }
+   ]
+  },
+  {
+   "id": "mach",
+   "name": "기계",
+   "subs": [
+    {
+     "id": "robot",
+     "name": "로봇·자동화"
+    },
+    {
+     "id": "heavy",
+     "name": "건설·농기계"
+    },
+    {
+     "id": "indmach",
+     "name": "산업기계·부품"
+    }
+   ]
+  },
+  {
+   "id": "auto",
+   "name": "자동차",
+   "subs": [
+    {
+     "id": "oem",
+     "name": "완성차"
+    },
+    {
+     "id": "autoparts",
+     "name": "부품"
+    },
+    {
+     "id": "tire",
+     "name": "타이어"
+    }
+   ]
+  },
+  {
+   "id": "bio",
+   "name": "제약·바이오",
+   "subs": [
+    {
+     "id": "newdrug",
+     "name": "신약 개발"
+    },
+    {
+     "id": "platform_bio",
+     "name": "플랫폼·기술수출"
+    },
+    {
+     "id": "cdmo",
+     "name": "CDMO·바이오시밀러"
+    },
+    {
+     "id": "pharma",
+     "name": "전통 제약"
+    },
+    {
+     "id": "api",
+     "name": "원료·동물약"
+    }
+   ]
+  },
+  {
+   "id": "medtech",
+   "name": "의료기기",
+   "subs": [
+    {
+     "id": "aesthetic",
+     "name": "미용의료"
+    },
+    {
+     "id": "medev",
+     "name": "치료·진단 기기"
+    },
+    {
+     "id": "ivd",
+     "name": "체외진단"
+    },
+    {
+     "id": "medsupply",
+     "name": "의료 소모품"
+    }
+   ]
+  },
+  {
+   "id": "cosmetic",
+   "name": "화장품",
+   "subs": [
+    {
+     "id": "cos_brand",
+     "name": "브랜드"
+    },
+    {
+     "id": "cos_odm",
+     "name": "ODM·OEM"
+    },
+    {
+     "id": "cos_mat",
+     "name": "원료·용기"
+    }
+   ]
+  },
+  {
+   "id": "food",
+   "name": "음식료",
+   "subs": [
+    {
+     "id": "procfood",
+     "name": "가공식품"
+    },
+    {
+     "id": "beverage",
+     "name": "음료·주류"
+    },
+    {
+     "id": "feed",
+     "name": "원료·사료"
+    },
+    {
+     "id": "tobacco",
+     "name": "담배"
+    }
+   ]
+  },
+  {
+   "id": "chem",
+   "name": "화학",
+   "subs": [
+    {
+     "id": "refinery",
+     "name": "정유"
+    },
+    {
+     "id": "petchem",
+     "name": "석유화학"
+    },
+    {
+     "id": "finechem",
+     "name": "정밀화학"
+    }
+   ]
+  },
+  {
+   "id": "steel",
+   "name": "철강·금속",
+   "subs": [
+    {
+     "id": "steel",
+     "name": "철강"
+    },
+    {
+     "id": "nonferrous",
+     "name": "비철금속"
+    }
+   ]
+  },
+  {
+   "id": "material",
+   "name": "소재·기타제조",
+   "subs": [
+    {
+     "id": "paper",
+     "name": "포장재(종이·금속·플라스틱)"
+    },
+    {
+     "id": "glass",
+     "name": "유리·시멘트"
+    },
+    {
+     "id": "othermfg",
+     "name": "기타 제조"
+    }
+   ]
+  },
+  {
+   "id": "constr",
+   "name": "건설",
+   "subs": [
+    {
+     "id": "construction",
+     "name": "건설"
+    },
+    {
+     "id": "buildmat",
+     "name": "건자재"
+    }
+   ]
+  },
+  {
+   "id": "retail",
+   "name": "유통",
+   "subs": [
+    {
+     "id": "store",
+     "name": "백화점·마트·편의점"
+    },
+    {
+     "id": "ecommerce",
+     "name": "온라인 커머스"
+    },
+    {
+     "id": "trading",
+     "name": "도매·상사"
+    }
+   ]
+  },
+  {
+   "id": "apparel",
+   "name": "섬유·의류",
+   "subs": [
+    {
+     "id": "fashion",
+     "name": "의류 브랜드"
+    },
+    {
+     "id": "textile",
+     "name": "OEM·섬유"
+    }
+   ]
+  },
+  {
+   "id": "media",
+   "name": "미디어·엔터",
+   "subs": [
+    {
+     "id": "music",
+     "name": "음악·기획사"
+    },
+    {
+     "id": "drama",
+     "name": "드라마·영화"
+    },
+    {
+     "id": "broadcast",
+     "name": "광고·방송"
+    },
+    {
+     "id": "webtoon",
+     "name": "웹툰·출판"
+    }
+   ]
+  },
+  {
+   "id": "leisure",
+   "name": "레저·여행",
+   "subs": [
+    {
+     "id": "airline",
+     "name": "항공"
+    },
+    {
+     "id": "travel",
+     "name": "여행"
+    },
+    {
+     "id": "casino",
+     "name": "카지노·호텔"
+    }
+   ]
+  },
+  {
+   "id": "logistics",
+   "name": "운송·물류",
+   "subs": [
+    {
+     "id": "shipping",
+     "name": "해운"
+    },
+    {
+     "id": "land",
+     "name": "육운·택배"
+    }
+   ]
+  },
+  {
+   "id": "fin",
+   "name": "금융",
+   "subs": [
+    {
+     "id": "bank",
+     "name": "은행"
+    },
+    {
+     "id": "broker",
+     "name": "증권"
+    },
+    {
+     "id": "insurance",
+     "name": "보험"
+    },
+    {
+     "id": "card",
+     "name": "카드·핀테크"
+    },
+    {
+     "id": "vc",
+     "name": "창업투자"
+    }
+   ]
+  },
+  {
+   "id": "telecom",
+   "name": "통신",
+   "subs": [
+    {
+     "id": "telco",
+     "name": "통신사"
+    }
+   ]
+  },
+  {
+   "id": "utility",
+   "name": "전력·유틸리티",
+   "subs": [
+    {
+     "id": "util",
+     "name": "전력·가스"
+    }
+   ]
+  },
+  {
+   "id": "living",
+   "name": "생활소비재",
+   "subs": [
+    {
+     "id": "furniture",
+     "name": "가구·인테리어"
+    },
+    {
+     "id": "household",
+     "name": "생활용품"
+    },
+    {
+     "id": "toy",
+     "name": "완구·문구·기타"
+    }
+   ]
+  },
+  {
+   "id": "holding",
+   "name": "지주회사",
+   "subs": [
+    {
+     "id": "holding",
+     "name": "지주회사"
+    }
+   ]
+  },
+  {
+   "id": "service",
+   "name": "전문서비스",
+   "subs": [
+    {
+     "id": "edu",
+     "name": "교육"
+    },
+    {
+     "id": "hr",
+     "name": "인력·아웃소싱·컨설팅"
+    },
+    {
+     "id": "env",
+     "name": "환경"
+    }
+   ]
+  }
+ ]
+}
