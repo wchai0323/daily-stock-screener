@@ -1,0 +1,513 @@
+{
+ "asof": "2026-11-06",
+ "provider": "github",
+ "tagged": 2,
+ "source": 2513,
+ "this_run": {
+  "ok": 0,
+  "empty_src": 2,
+  "error": 148
+ },
+ "errors": [
+  [
+   "000020",
+   "동화약품",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000040",
+   "KR모터스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000050",
+   "경방",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000070",
+   "삼양홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000080",
+   "하이트진로",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000100",
+   "유한양행",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000120",
+   "CJ대한통운",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000140",
+   "하이트진로홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000150",
+   "두산",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000180",
+   "성창기업지주",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000210",
+   "DL",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000220",
+   "유유제약",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000230",
+   "일동홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000240",
+   "한국앤컴퍼니",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000250",
+   "삼천당제약",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000270",
+   "기아",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000320",
+   "노루홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000370",
+   "한화손해보험",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000390",
+   "SP삼화",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000400",
+   "롯데손해보험",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000430",
+   "대원강업",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000480",
+   "시알홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000490",
+   "대동",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000500",
+   "가온전선",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000520",
+   "삼일제약",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000540",
+   "흥국화재",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000590",
+   "CS홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000640",
+   "동아제약",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000650",
+   "천일고속",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000660",
+   "SK하이닉스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000670",
+   "영풍",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000680",
+   "LS네트웍스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000700",
+   "유수홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000720",
+   "현대건설",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000760",
+   "이화산업",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000850",
+   "화천기공",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000860",
+   "강남제비스코",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000880",
+   "한화",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000890",
+   "보해양조",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000910",
+   "유니온",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000950",
+   "전방",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000970",
+   "한국주철관공업",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "000990",
+   "DB하이텍",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001000",
+   "신라섬유",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001020",
+   "페이퍼코리아",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001040",
+   "CJ",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001060",
+   "JW중외제약",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001070",
+   "대한방직",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001080",
+   "MH머트리얼즈",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001120",
+   "LX인터내셔널",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001130",
+   "대한제분",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001200",
+   "유진증권",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001210",
+   "금호전기",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001230",
+   "동국홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001250",
+   "GS글로벌",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001260",
+   "남광토건",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001270",
+   "부국증권",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001290",
+   "상상인증권",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001360",
+   "삼성제약",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001380",
+   "SG글로벌",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001390",
+   "KG케미칼",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001420",
+   "태원물산",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001430",
+   "세아베스틸지주",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001440",
+   "대한전선",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001450",
+   "현대해상",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001460",
+   "BYC",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001470",
+   "삼부토건",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001500",
+   "현대차증권",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001510",
+   "SK증권",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001520",
+   "동양",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001540",
+   "안국약품",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001550",
+   "조비",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001560",
+   "제일연마",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001570",
+   "금양",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001620",
+   "케이비아이동국실업",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001630",
+   "종근당홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001680",
+   "대상",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001720",
+   "신영증권",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001740",
+   "SK네트웍스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001750",
+   "한양증권",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001770",
+   "SHD",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001780",
+   "알루코",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001790",
+   "대한제당",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001800",
+   "오리온홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001810",
+   "무림SP",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001820",
+   "삼화콘덴서공업",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001840",
+   "이화공영",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "001940",
+   "KISCO홀딩스",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002020",
+   "코오롱",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002030",
+   "아세아",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002070",
+   "비비안",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002100",
+   "경농",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002140",
+   "고려산업",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002150",
+   "도화엔지니어링",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002170",
+   "SYTS",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002200",
+   "한국수출포장공업",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002210",
+   "동성제약",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002230",
+   "피에스텍",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002240",
+   "고려제강",
+   "Expecting value: line 1 column 1 (char 0)"
+  ],
+  [
+   "002290",
+   "삼일기업공사",
+   "Expecting value: line 1 column 1 (char 0)"
+  ]
+ ]
+}

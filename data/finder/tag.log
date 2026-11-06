@@ -1,0 +1,5 @@
+[11:48:06] 제공자 github, 대상 150곳
+[11:51:49] 50/150 {'ok': 0, 'empty_src': 0, 'error': 50}
+[11:55:31] 100/150 {'ok': 0, 'empty_src': 1, 'error': 99}
+[11:59:14] 150/150 {'ok': 0, 'empty_src': 2, 'error': 148}
+[11:59:19] {"asof": "2026-11-06", "provider": "github", "tagged": 2, "source": 2513, "this_run": {"ok": 0, "empty_src": 2, "error": 148}}
