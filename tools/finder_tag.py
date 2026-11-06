@@ -91,8 +91,10 @@ def call_github(user):
               "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]})
     if r.status_code == 429:
         raise RateLimited(r.text[:200])
-    r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"]
+    try:
+        return r.json()["choices"][0]["message"]["content"]
+    except Exception as e:  # noqa: BLE001
+        raise RuntimeError(f"HTTP {r.status_code} {r.headers.get('content-type')} {r.text[:300]!r}") from e
 
 
 def norm(s):
@@ -147,7 +149,7 @@ def main():
             break
         except Exception as e:  # noqa: BLE001
             stats["error"] += 1
-            errors.append([code, rec["name"], str(e)[:150]])
+            errors.append([code, rec["name"], f"{type(e).__name__}: {str(e)[:400]}"])
         if i % 50 == 0:
             log(f"{i}/{len(todo)} {stats}")
         time.sleep(gap)
