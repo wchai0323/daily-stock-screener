@@ -73,8 +73,17 @@ def decode(b):
     return b.decode("utf-8", "ignore")
 
 
+def _table(m):
+    """표 안의 줄바꿈 태그를 없애고 한 행을 'a | b | c' 한 줄로 만든다."""
+    t = re.sub(r"(?is)<(P|BR|SPAN)[^>]*>|</(P|SPAN)>", " ", m.group(0))
+    t = re.sub(r"(?is)<TR[^>]*>", "\n", t)
+    t = re.sub(r"(?is)<(TD|TH|TE|TU)[^>]*>", " | ", t)
+    return t
+
+
 def to_text(xml):
-    s = re.sub(r"(?is)<(TABLE-GROUP|TABLE)[^>]*>", "\n[표]\n", xml)
+    s = re.sub(r"(?is)<TABLE[^>]*>.*?</TABLE>", _table, xml)
+    s = re.sub(r"(?is)<(TABLE-GROUP|TABLE)[^>]*>", "\n[표]\n", s)
     s = re.sub(r"(?is)</(TABLE-GROUP|TABLE)>", "\n[/표]\n", s)
     s = re.sub(r"(?is)<TR[^>]*>", "\n", s)
     s = re.sub(r"(?is)<(TD|TH|TE|TU)[^>]*>", " | ", s)
@@ -174,7 +183,7 @@ def main():
             json.dump(rec, f, ensure_ascii=False)
         return bool(body)
 
-    with ThreadPoolExecutor(4) as ex:
+    with ThreadPoolExecutor(8) as ex:
         futs = {ex.submit(one, r): r for r in todo}
         for i, fu in enumerate(as_completed(futs), 1):
             r = futs[fu]
