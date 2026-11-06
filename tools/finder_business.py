@@ -44,7 +44,7 @@ def annual_filings(client, today):
     """최근 13개월 사업보고서(A001). 회사당 가장 최근 접수 1건 (정정본이 나중이면 정정본)."""
     latest = {}
     end = today
-    start_all = today - dt.timedelta(days=400)
+    start_all = today - dt.timedelta(days=760)   # 최신 문서가 없을 때 쓸 직전 연도분까지
     while end > start_all:
         bgn = max(start_all, end - dt.timedelta(days=88))
         for r in client.filings(bgn, end, "A", "A001"):
@@ -55,11 +55,12 @@ def annual_filings(client, today):
                 continue
             if "사업보고서" not in (r.get("report_nm") or ""):
                 continue
-            prev = latest.get(stock)
-            if not prev or r["rcept_no"] > prev["rcept_no"]:
-                latest[stock] = r
+            latest.setdefault(stock, []).append(r)
         end = bgn - dt.timedelta(days=1)
-    return latest
+    for v in latest.values():                      # 최신순. 최신 문서가 없으면(014) 다음 것을 쓴다
+        v.sort(key=lambda x: x["rcept_no"], reverse=True)
+    cut = (today - dt.timedelta(days=400)).strftime("%Y%m%d")
+    return {k: v for k, v in latest.items() if v[0]["rcept_dt"] >= cut}   # 대상은 최근 13개월 제출사만
 
 
 # ---------------- 문서 파싱 ----------------
@@ -160,7 +161,7 @@ def main():
 
     targets = annual_filings(client, today)
     log(f"최근 사업보고서 제출 상장사 {len(targets)}곳")
-    todo = [r for s, r in sorted(targets.items()) if not os.path.exists(f"{OUT}/{s}.json")]
+    todo = [rs for s, rs in sorted(targets.items()) if not os.path.exists(f"{OUT}/{s}.json")]
     mx = os.environ.get("MAX_COMPANIES")
     if mx:
         todo = todo[: int(mx)]
@@ -169,9 +170,12 @@ def main():
     stats = {"ok": 0, "nosection": 0, "error": 0}
     errors = []
 
-    def one(r):
-        res = client._get("document.xml", rcept_no=r["rcept_no"])
-        if not res.content.startswith(b"PK"):
+    def one(rs):
+        for r in rs:
+            res = client._get("document.xml", rcept_no=r["rcept_no"])
+            if res.content.startswith(b"PK"):
+                break
+        else:
             raise DartError(res.text[:200])
         body = extract(res.content)
         rec = {"code": r["stock_code"], "name": r["corp_name"], "corp_code": r["corp_code"],
@@ -186,7 +190,7 @@ def main():
     with ThreadPoolExecutor(8) as ex:
         futs = {ex.submit(one, r): r for r in todo}
         for i, fu in enumerate(as_completed(futs), 1):
-            r = futs[fu]
+            r = futs[fu][0]
             try:
                 stats["ok" if fu.result() else "nosection"] += 1
             except BudgetExceeded as e:
