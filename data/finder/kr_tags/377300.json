@@ -1,0 +1,1 @@
+{"code": "377300", "name": "카카오페이", "rcept_no": "20260312001366", "model": "claude-session", "summary": "간편결제·대출 중개·투자 등 핀테크 플랫폼", "themes": [{"id": "fintech", "purity": "core", "share": 100, "basis": "표", "evidence": "결제서비스", "ev_found": true}]}

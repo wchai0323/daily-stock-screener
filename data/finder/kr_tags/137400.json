@@ -1,0 +1,1 @@
+{"code": "137400", "name": "피엔티", "rcept_no": "20260316000390", "model": "claude-session", "summary": "2차전지 전극 코터 등 롤투롤 공정 장비", "themes": [{"id": "battery_eq", "purity": "core", "share": 88.66, "basis": "표", "evidence": "양극 음극재 및 분리막제조장비 및 노칭장비", "ev_found": true}, {"id": "display", "purity": "minor", "share": 7.89, "basis": "표", "evidence": "OLED용필름 및 편광필름", "ev_found": true}]}

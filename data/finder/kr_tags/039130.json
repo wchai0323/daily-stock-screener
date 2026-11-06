@@ -1,0 +1,1 @@
+{"code": "039130", "name": "하나투어", "rcept_no": "20260319001345", "model": "claude-session", "summary": "패키지·항공권 등 여행 상품 기획·판매", "themes": [{"id": "travel", "purity": "core", "share": null, "basis": "서술", "evidence": "패키지, 허니문, 현지투어, 골프투어, 개별여행", "ev_found": true}]}

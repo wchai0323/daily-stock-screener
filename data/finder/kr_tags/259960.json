@@ -1,0 +1,1 @@
+{"code": "259960", "name": "크래프톤", "rcept_no": "20260515002689", "model": "claude-session", "summary": "배틀그라운드 등 PC·모바일 게임 개발·퍼블리싱", "themes": [{"id": "game", "purity": "core", "share": 89.2, "basis": "표", "evidence": "라이브 서비스 게임 간 경쟁이 심화되는 양상", "ev_found": true}, {"id": "ent", "purity": "minor", "share": 9.72, "basis": "표", "evidence": "광고 및 콘텐츠", "ev_found": true}]}

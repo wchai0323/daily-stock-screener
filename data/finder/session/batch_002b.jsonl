@@ -1,0 +1,1 @@
+{"code":"253590","summary":"SSD 테스터·메모리 번인 테스터 장비","themes":[{"id":"semi_be","purity":"core","share":90.37,"basis":"표·서술","evidence":"반도체 후공정 검사장비 업체"},{"id":"semi_hbm","purity":"minor","share":null,"basis":"서술","evidence":"고대역폭 메모리(HBM)까지도 테스트를 진행할 수 있는 장비"},{"id":"cxl","purity":"minor","share":null,"basis":"서술","evidence":"DDR5·고적층 NAND·CXL DRAM·Gen5 SSD와 같은 고성능 제품군"}]}

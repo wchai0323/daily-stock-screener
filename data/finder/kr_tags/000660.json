@@ -1,0 +1,1 @@
+{"code": "000660", "name": "SK하이닉스", "rcept_no": "20260317000635", "model": "claude-session", "summary": "D램·HBM·낸드 메모리 반도체 제조", "themes": [{"id": "semi_hbm", "purity": "core", "share": 100, "basis": "표", "evidence": "DRAM, NAND Flash 등", "ev_found": true}, {"id": "foundry", "purity": "minor", "share": null, "basis": "서술", "evidence": "Foundry 사업도 병행하고 있습니다", "ev_found": true}]}
