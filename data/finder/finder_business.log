@@ -1,0 +1,3 @@
+[09:40:04] 최근 사업보고서 제출 상장사 2566곳
+[09:40:04] 이번 실행 대상 20곳
+[09:43:05] {"asof": "2026-11-06", "targets": 2566, "collected": 19, "remaining": 2547, "this_run": {"ok": 19, "nosection": 0, "error": 1}, "dart_calls": 170}
