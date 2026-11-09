@@ -147,7 +147,7 @@ def test_g_lane_pass_and_scoring():
     assert good["pass"], good["fail"]
     assert good["lane"] == "G"
     screen.score([good])
-    assert 0 < good["auto_score"] <= 69
+    assert 0 < good["auto_score"] <= 74
     assert good["scores"]["S8"] == 5   # 희석 0%
 
 
@@ -336,3 +336,39 @@ def test_normalized_pe_cell():
     from screener import report
     assert "8년" in report._valuation({"pe_ttm": 10.0, "pe_norm": 14.2, "pe_norm_years": 8})
     assert "평균적자" in report._valuation({"pe_ttm": 10.0, "pe_norm": None, "pe_norm_years": 7, "ni_norm_avg": -3})
+
+
+def test_valuation_extreme_fails_g_lane_and_tags():
+    """성장 대비 밸류: 극단 고평가는 G 차선 탈락, 통과 종목에는 저평가·고평가 태그와 S12 절대 점수."""
+    base = _company("BASE", make_facts(REV, gpm=0.6))
+    rg, gp = base["rev_growth"], base["gross_profit_ttm"]
+    pct = min(rg, screen.M.VAL_GROWTH_CAP) * 100
+
+    def at(ticker, ratio):
+        # 원하는 'EV/매출총이익 ÷ 성장률' 값이 나오도록 시총을 맞춘다 (순부채 0 가정)
+        return _company(ticker, make_facts(REV, gpm=0.6), cap=ratio * pct * gp, net_debt=0)
+
+    cheap, rich, extreme = at("CHEAP", 0.08), at("RICH", 0.6), at("XTRM", 1.1)
+    rows = [cheap, rich, extreme] + _peers()
+    screen.run(rows)
+    assert cheap["pass"] and rich["pass"], (cheap["fail"], rich["fail"])
+    assert not extreme["pass"]
+    assert any("극단 고평가" in r for r in extreme["fail"])
+    passed = [c for c in rows if c["pass"]]
+    screen.score(passed)
+    assert cheap["val_tag"] == "성장 대비 저평가" and cheap["scores"]["S12"] == 10
+    assert rich["val_tag"] == "성장 대비 고평가" and rich["scores"]["S12"] == 0
+    assert cheap["val_basis"] == "EV/매출총이익"
+
+
+def test_valuation_fallbacks():
+    """매출총이익 미공시면 EV/영업이익, C 차선은 EV/FCF, 계산 불가면 중립 점수."""
+    c = {"ev": 1000.0, "rev_growth": 0.25, "revenue_ttm": 500.0, "gpm": None, "opm": 0.2, "fcf_ttm": 100.0}
+    v, basis = screen.valuation(c, "G")
+    assert basis == "EV/영업이익" and v == pytest.approx(1000 / 100 / 25)
+    v, basis = screen.valuation(c, "C")
+    assert basis == "EV/FCF" and v == pytest.approx(1000 / 100 / 25)
+    # 성장률 100% 상한
+    v, _ = screen.valuation(dict(c, rev_growth=3.0), "C")
+    assert v == pytest.approx(1000 / 100 / 100)
+    assert screen.valuation(dict(c, opm=-0.1), "G") == (None, None)

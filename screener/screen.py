@@ -140,6 +140,53 @@ def is_cyclical(c):
     return M.is_cyclical(c)
 
 
+def valuation(c, lane="G"):
+    """성장 대비 밸류에이션 배수. 반환 (값, 근거). 낮을수록 싸다. 계산 불가면 (None, None).
+
+    G: EV/매출총이익 ÷ 매출성장률(%). 매출총이익 미공시면 EV/영업이익 ÷ 성장률(%)
+    C: EV/FCF ÷ 매출성장률(%)
+    성장률은 VAL_GROWTH_CAP(100%)에서 자른다. EV가 음수(순현금 > 시총)면 음수가 나오며 '매우 쌈'으로 본다.
+    """
+    ev, rg, rev = c.get("ev"), c.get("rev_growth"), c.get("revenue_ttm")
+    if ev is None or rg is None or rg <= 0:
+        return None, None
+    g = min(rg, M.VAL_GROWTH_CAP) * 100
+    if lane == "C":
+        fcf = c.get("fcf_ttm")
+        if fcf is None or fcf <= 0:
+            return None, None
+        return ev / fcf / g, "EV/FCF"
+    gp = c.get("gross_profit_ttm")
+    if gp is None and c.get("gpm") is not None and rev:
+        gp = c["gpm"] * rev
+    if gp is not None and gp > 0:
+        return ev / gp / g, "EV/매출총이익"
+    opm = c.get("opm")
+    if opm is not None and opm > 0 and rev:
+        return ev / (opm * rev) / g, "EV/영업이익"
+    return None, None
+
+
+def valuation_tag(v, lane):
+    """'성장 대비 저평가' / '성장 대비 고평가' / None."""
+    if v is None:
+        return None
+    cheap, rich = (M.VAL_C_CHEAP, M.VAL_C_RICH) if lane == "C" else (M.VAL_G_CHEAP, M.VAL_G_RICH)
+    if v < cheap:
+        return "성장 대비 저평가"
+    if v >= rich:
+        return "성장 대비 고평가"
+    return None
+
+
+def apply_valuation(c):
+    """차선이 정해진 통과 종목에 밸류 값·근거·태그를 붙인다."""
+    lane = c.get("lane") or "G"
+    v, basis = valuation(c, lane)
+    c["val_ratio"], c["val_basis"], c["val_tag"] = v, basis, valuation_tag(v, lane)
+    return c
+
+
 def _lane(c):
     g = lambda k: c.get(k)
     rg, gpm = g("rev_growth"), g("gpm")
@@ -168,6 +215,10 @@ def _lane(c):
             why_g.append(f"매출총이익률 {gpm:.0%} < 기준 {floor:.0%}")
         if g("gpm_prev") is not None and g("gpm_prev") - gpm > M.G_GPM_DECLINE_MAX:
             why_g.append("매출총이익률 2%p 초과 하락")
+    # 성장 대비 극단 고평가 (2026-11-10). 지표 계산 불가면 판정하지 않는다
+    v, basis = valuation(c, "G")
+    if v is not None and v > M.VAL_G_EXTREME:
+        why_g.append(f"성장 대비 극단 고평가({basis}÷성장률 {v:.2f})")
     if not why_g:
         return "G", []
 
@@ -202,22 +253,10 @@ def _band(v, bands):
 
 
 def score(passed):
-    """1층 통과 종목 목록에 자동 점수를 붙인다 (69점 만점)."""
+    """1층 통과 종목 목록에 자동 점수를 붙인다 (미국 74점, 한국 71점 만점)."""
     if not passed:
         return
     rg_pct = _pct_rank([c.get("rev_growth") for c in passed])
-    g_rows = [c for c in passed if c["lane"] == "G"]
-    c_rows = [c for c in passed if c["lane"] == "C"]
-
-    def ev_gp_per_growth(c):
-        gp, rg, ev = c.get("gross_profit_ttm"), c.get("rev_growth"), c.get("ev")
-        if not gp or gp <= 0 or not rg or rg <= 0 or ev is None:
-            return None
-        return (ev / gp) / (rg * 100)
-
-    g_val_pct = dict(zip([id(c) for c in g_rows], _pct_rank([ev_gp_per_growth(c) for c in g_rows])))
-    c_val_pct = dict(zip([id(c) for c in c_rows], _pct_rank([c.get("fcf_yield") for c in c_rows])))
-
     for c, rp in zip(passed, rg_pct):
         s = {}
         s["S1"] = round((rp or 0) * 8, 1)
@@ -244,11 +283,14 @@ def score(passed):
             s["S10"] = 2
         else:
             s["S10"] = 0
-        vp = g_val_pct.get(id(c)) if c["lane"] == "G" else c_val_pct.get(id(c))
-        if vp is None or (isinstance(vp, float) and math.isnan(vp)):
-            s["S12"] = 0
+        # S12 성장 조정 밸류 (10점, 절대 구간). 2026-11-10 전에는 통과 종목 내 상대 순위 5점
+        apply_valuation(c)
+        v = c["val_ratio"]
+        if v is None:
+            s["S12"] = M.S12_MISSING
         else:
-            s["S12"] = round(((1 - vp) if c["lane"] == "G" else vp) * 5, 1)
+            bands = M.S12_C_BANDS if c["lane"] == "C" else M.S12_G_BANDS
+            s["S12"] = next((pts for hi, pts in bands if v < hi), 0)
         cap = c.get("mkt_cap") or 0
         s["S13"] = next((pts for lim, pts in M.CAP_BANDS if cap < lim), 1)
         if M.USE_SHORT:
@@ -293,6 +335,7 @@ def run(companies):
 def entry_tags(c):
     """3단계 진입 속도 참고 정보와 주의 표시 (점수 아님)."""
     tags = list(M.extra_tags(c))
+    apply_valuation(c)   # 밸류 태그는 메일의 밸류 칸과 CSV val_tag에 표시
     if is_cyclical(c):
         tags.append("경기 민감 업종")
     if c.get("gpm") is None:

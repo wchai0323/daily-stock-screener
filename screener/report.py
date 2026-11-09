@@ -7,6 +7,7 @@ import pandas as pd
 
 RESULT_COLS = [
     "ticker", "name", "sector", "industry", "lane", "auto_score", "auto_score_pct", "priority", "mkt_cap",
+    "val_tag", "val_ratio", "val_basis",
     "pe_ttm", "pe_fwd", "pe_norm", "pe_norm_years", "peg", "psr", "net_income_ttm", "rev_growth", "q_yoy",
     "accel", "gpm", "ind_gpm_median", "opm", "opm_change", "fcf_margin", "fcf_yield", "dilution",
     "net_debt_ebitda", "runway_months", "rule_of_40", "short_pct_float", "price", "range_pos", "ma200_gap",
@@ -169,8 +170,27 @@ def _valuation(c):
     ni = c.get("net_income_ttm")
     if pe_ttm == "–" and ((ni is not None and ni <= 0) or (ni is None and (c.get("opm") or 0) < 0)):
         pe_ttm = "적자"
-    return (f"PER {pe_ttm} / {_x(c.get('pe_fwd'))} / {_norm(c)}<br>"
+    return (f"{_val_line(c)}PER {pe_ttm} / {_x(c.get('pe_fwd'))} / {_norm(c)}<br>"
             f"<span style='color:#666'>PEG {_x(c.get('peg'), 2)} · PSR {_x(c.get('psr'))}</span>")
+
+
+VAL_COLOR = {"성장 대비 저평가": "#1F6F3F", "성장 대비 고평가": "#C00000"}
+
+
+def _val_tag_html(c):
+    t = c.get("val_tag")
+    if not t:
+        return ""
+    return f"<b style='color:{VAL_COLOR.get(t, '#555')}'>{_e(t)}</b>"
+
+
+def _val_line(c):
+    """성장 조정 밸류 한 줄: 태그 + '÷성장 0.42 (EV/매출총이익)'."""
+    v, basis = c.get("val_ratio"), c.get("val_basis")
+    if v is None or (isinstance(v, float) and math.isnan(v)):
+        return "<span style='color:#888'>성장 조정 밸류 –</span><br>"
+    tag = _val_tag_html(c) or "<span style='color:#666'>성장 대비 적정</span>"
+    return f"{tag} <span style='color:#666'>{v:.2f} ({_e(basis)}÷성장)</span><br>"
 
 
 def _norm(c):
@@ -218,6 +238,8 @@ def _cause_badge(cause):
 
 def _summary_line(c):
     bits = [f"{c['lane']}차선", f"매출 {_pct(c.get('rev_growth'), True)}"]
+    if c.get("val_tag"):
+        bits.append(c["val_tag"])
     if c.get("accel") is not None:
         bits.append(f"가속 {c['accel'] * 100:+.0f}%p")
     bits.append(f"GPM {_pct(c.get('gpm'))}")
@@ -248,7 +270,7 @@ def _cand_rows(cands, holdings):
     return rows
 
 
-CAND_HEAD = ["종목", "섹터 / 업종", "차선", "자동점수", "시총", "PER TTM / Fwd / 정상화 · PEG · PSR", "매출 YoY", "가속",
+CAND_HEAD = ["종목", "섹터 / 업종", "차선", "자동점수", "시총", "성장 대비 밸류 · PER TTM / Fwd / 정상화 · PEG · PSR", "매출 YoY", "가속",
              "매출총이익률", "영업이익률", "희석", "진입 참고"]
 
 
@@ -273,7 +295,7 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
     parts.append(f"<p style='margin:6px 0 2px'>{line}</p>")
     parts.append(f"<p style='margin:0;color:#777;font-size:11px'>오늘 재무 갱신 {stats['refreshed']}개 기업 · "
                  f"{_M().SOURCE_NOTE} · "
-                 f"자동점수는 2층 100점 중 자동 계산 가능한 {_M().AUTO_SCORE_MAX}점 기준</p>")
+                 f"자동점수는 2층 {_M().SCORE_TOTAL}점 중 자동 계산 가능한 {_M().AUTO_SCORE_MAX}점 기준</p>")
 
     # 보유 종목 경고
     held_alerts = []
@@ -312,10 +334,13 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
     parts.append(f"<h2 {H2}>자동점수 상위 {min(_M().TOP_N, len(passed))}</h2>")
     parts.append(f"<p style='margin:2px 0;font-size:11px;color:#666'>★ = 1순위 후보. 업종 = {_M().INDUSTRY_LABEL} "
                  f"매출총이익률 40백분위(G 차선 흑자 기준선). 진입 참고는 점수가 아닌 분할매수 속도 참고용. "
+                 f"성장 대비 밸류 = G 차선 EV/매출총이익(미공시면 EV/영업이익) ÷ 매출성장률(%), C 차선 EV/FCF ÷ 매출성장률(%), 성장률 최대 100%. "
+                 f"G {_M().VAL_G_CHEAP} 미만 저평가 · {_M().VAL_G_RICH} 이상 고평가 · {_M().VAL_G_EXTREME} 초과 1층 탈락, "
+                 f"C {_M().VAL_C_CHEAP} 미만 저평가 · {_M().VAL_C_RICH} 이상 고평가. "
                  f"{_e(_M().VALUATION_NOTE)}</p>")
     parts.append(_table(CAND_HEAD, _cand_rows(passed[:_M().TOP_N], holdings)))
     parts.append("<p style='font-size:11px;color:#777'>전체 통과 종목과 항목별 점수는 첨부 CSV에 있습니다. "
-                 f"남은 2층 {100 - _M().AUTO_SCORE_MAX}점(잔고·역DCF·TAM·경영진·내부자·가이던스·기관"
+                 f"남은 2층 {_M().SCORE_TOTAL - _M().AUTO_SCORE_MAX}점(잔고·역DCF·TAM·경영진·내부자·가이던스·기관"
                  f"{'' if _M().USE_SHORT else '·공매도'})과 3·4층은 체크리스트 검증 단계에서 채웁니다.</p>")
     parts.append("</div>")
     return "".join(parts)
