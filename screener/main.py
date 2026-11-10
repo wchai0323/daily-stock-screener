@@ -196,8 +196,17 @@ def main():
 
     # 8) 메일
     holdings = store.load_holdings()
+    watch = store.load_holdings("watchlist.txt")
+    watch_px = {}
+    need = sorted(t for t in watch if t not in px)
+    if need:
+        try:
+            watch_px = prices.fetch_prices(need)
+        except Exception as e:  # noqa: BLE001 - 관심종목 주가 실패로 메일이 멈추지 않게
+            log(f"관심종목 주가 실패: {e}")
     html_body = report.render(today, prev_day, passed, new, exits, holdings, companies,
-                              {"universe": len(universe), "refreshed": len(to_refresh)})
+                              {"universe": len(universe), "refreshed": len(to_refresh)},
+                              watch=watch, watch_px=watch_px)
     out = Path(store.ROOT) / "out"
     out.mkdir(parents=True, exist_ok=True)
     (out / "latest.html").write_text(html_body, encoding="utf-8")

@@ -372,3 +372,36 @@ def test_valuation_fallbacks():
     v, _ = screen.valuation(dict(c, rev_growth=3.0), "C")
     assert v == pytest.approx(1000 / 100 / 100)
     assert screen.valuation(dict(c, opm=-0.1), "G") == (None, None)
+
+
+def test_t_lane_hardware_growth():
+    """T 차선: G/C 탈락(희석·저마진)이지만 하드웨어 업종 성장주는 T로 통과, 업종이 다르면 탈락."""
+    shares = [100e6 * (1.0 + 0.025 * i) for i in range(len(REV))]   # 1년 희석 약 10% → G/C의 H1 탈락
+    hw = _company("HW", make_facts(REV, gpm=0.25, shares_q=shares), sic=3674)
+    sw = _company("SW", make_facts(REV, gpm=0.25, shares_q=shares), sic=7372)
+    big = _company("BIG", make_facts([r * 3 for r in REV], gpm=0.6), sic=3674, cap=30e9)   # G/C 시총 초과, T 시총 이내
+    rows = [hw, sw, big] + _peers()
+    screen.run(rows)
+    assert hw["pass"] and hw["lane"] == "T", hw["fail"]
+    assert not sw["pass"]
+    assert big["pass"] and big["lane"] == "T", big["fail"]
+    passed = [c for c in rows if c["pass"]]
+    screen.score(passed)
+    assert hw["scores"]["S12"] in (0, 3, 6, 8, 10)
+
+
+def test_t_lane_rules():
+    base = {"sic": 3674, "rev_growth": 0.30, "revenue_ttm": 500e6, "q_yoy": 0.20, "opm_change": 0.01,
+            "gpm": 0.30, "dilution": 0.10, "profitable": True, "net_debt": -1e8, "net_debt_ebitda": None,
+            "ev": 2e9, "gross_profit_ttm": 150e6}
+    assert screen.t_lane_reasons(base) == []
+    assert any("희석" in r for r in screen.t_lane_reasons(dict(base, dilution=0.40)))
+    assert any("분기" in r for r in screen.t_lane_reasons(dict(base, q_yoy=0.05)))
+    assert any("악화" in r for r in screen.t_lane_reasons(dict(base, opm_change=-0.05)))
+    assert any("순부채" in r for r in screen.t_lane_reasons(dict(base, net_debt=5e8, net_debt_ebitda=3.5)))
+    assert screen.t_lane_reasons(dict(base, net_debt=5e8, net_debt_ebitda=2.6)) == []
+    assert screen.t_lane_reasons(dict(base, sic=3845)) != []          # 의료기기 제외
+    assert screen.t_lane_reasons(dict(base, sic=1623)) == []          # 전문건설 포함
+    c = dict(base, lane="T", dilution=0.20, net_debt=5e8, net_debt_ebitda=2.6)
+    tags = screen.entry_tags(c)
+    assert "희석 주의" in tags and "부채 주의" in tags

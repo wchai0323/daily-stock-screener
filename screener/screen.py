@@ -2,6 +2,7 @@
 
 입력: 기업별 dict (metrics + meta + 시장 데이터). 출력: 같은 dict에 판정·사유·점수를 붙인 목록.
 """
+import bisect
 import math
 
 import pandas as pd
@@ -27,6 +28,15 @@ def _pct_rank(values):
     return s.rank(pct=True).where(s.notna()).tolist()
 
 
+def t_enabled():
+    return bool(getattr(M, "T_LANE_ENABLED", False))
+
+
+def _universe_cap_max():
+    """T 차선이 켜져 있으면 유니버스 시총 상한을 T 기준(500억 달러)으로 넓힌다. G/C는 hard_filter에서 H3으로 거른다."""
+    return M.T_MKT_CAP_MAX if t_enabled() else M.MKT_CAP_MAX
+
+
 def universe_reasons(c):
     """0단계 탈락 사유 목록 (빈 목록이면 통과)."""
     r = list(M.universe_extra(c))
@@ -40,8 +50,8 @@ def universe_reasons(c):
         r.append("시가총액 확인 불가")
     elif cap < M.MKT_CAP_MIN:
         r.append(f"시가총액 {M.fmt_money(M.MKT_CAP_MIN)} 미만")
-    elif cap > M.MKT_CAP_MAX:
-        r.append(f"H3 시가총액 {M.fmt_money(M.MKT_CAP_MAX)} 초과")
+    elif cap > _universe_cap_max():
+        r.append(f"H3 시가총액 {M.fmt_money(_universe_cap_max())} 초과")
     if (c.get("adv20") or 0) < M.ADV20_MIN:
         r.append("거래대금 부족")
     if (c.get("price") or 0) < M.PRICE_MIN:
@@ -49,11 +59,12 @@ def universe_reasons(c):
     return r
 
 
-def _industry_groups(rows):
-    """세부 업종 → 큰 업종 → 전체 순으로 표본이 8개 이상인 비교 그룹을 정한다 (미국 SIC, 한국 KSIC)."""
+def _industry_groups(rows, ref=None):
+    """세부 업종 → 큰 업종 → 전체 순으로 표본이 8개 이상인 비교 그룹을 정한다 (미국 SIC, 한국 KSIC).
+    ref를 주면 표본 수는 ref 기준으로 센다 (T 차선 대형주를 G/C 유니버스 업종 그룹에 붙일 때)."""
     keys = [M.industry_keys(c) for c in rows]
     cnt_f, cnt_c = {}, {}
-    for fine, coarse in keys:
+    for fine, coarse in ([M.industry_keys(c) for c in ref] if ref is not None else keys):
         if fine:
             cnt_f[fine] = cnt_f.get(fine, 0) + 1
         if coarse:
@@ -65,6 +76,25 @@ def _industry_groups(rows):
             c["ind_group"] = coarse
         else:
             c["ind_group"] = "ALL"
+
+
+def _pct_against(rows, ref, key):
+    """rows 각각의 key 값이 ref 중 같은 업종 그룹 안에서 몇 백분위인지 (그룹 표본이 없으면 None)."""
+    by = {}
+    for r in ref:
+        v = r.get(key)
+        if v is not None and not (isinstance(v, float) and math.isnan(v)):
+            by.setdefault(r["ind_group"], []).append(v)
+    for vals in by.values():
+        vals.sort()
+    out = []
+    for c in rows:
+        v, vals = c.get(key), by.get(c.get("ind_group"))
+        if v is None or (isinstance(v, float) and math.isnan(v)) or not vals:
+            out.append(None)
+        else:
+            out.append(bisect.bisect_right(vals, v) / len(vals))
+    return out
 
 
 def _group_stats(rows, key):
@@ -122,11 +152,73 @@ def hard_filter(c):
     # 시장 고유 위험 필터 (한국: 메자닌 잔액, 관리종목 등)
     reasons.extend(M.extra_hard(c))
 
+    # H3 시총: G/C는 200억 달러까지 (유니버스는 T 차선 때문에 500억 달러까지 넓혀져 있음)
+    if (g("mkt_cap") or 0) > M.MKT_CAP_MAX:
+        reasons.append(f"H3 시가총액 {M.fmt_money(M.MKT_CAP_MAX)} 초과")
+
     # H4 성장 차선
     lane, lane_reasons = _lane(c)
     if lane is None:
         reasons.extend(lane_reasons)
-    return (not reasons), lane, reasons
+    if not reasons:
+        return True, lane, []
+
+    # T 차선: G/C 탈락 종목만 별도 기준으로 다시 판정
+    if t_enabled():
+        t_why = t_lane_reasons(c)
+        if not t_why:
+            return True, "T", []
+        if t_industry(c):
+            reasons.append("T 미충족(" + ", ".join(t_why) + ")")
+    return False, lane, reasons
+
+
+def t_industry(c):
+    sic = c.get("sic")
+    if sic is None:
+        return False
+    if any(lo <= sic <= hi for lo, hi in M.T_SIC_EXCLUDED_RANGES):
+        return False
+    return any(lo <= sic <= hi for lo, hi in M.T_SIC_RANGES)
+
+
+def t_lane_reasons(c):
+    """T 차선(하드웨어 성장) 미충족 사유. 빈 목록이면 통과."""
+    g = lambda k: c.get(k)
+    why = []
+    if not t_industry(c):
+        return ["업종(기계·전자·계측·전문건설) 아님"]
+    rg, rev = g("rev_growth"), g("revenue_ttm")
+    if rg is not None and rev is not None and rev / (1 + rg) < M.PRIOR_REVENUE_MIN:
+        return ["기저 매출 너무 작음"]
+    if rg is None or rg < M.T_REV_GROWTH_MIN:
+        why.append(f"성장 {M.T_REV_GROWTH_MIN:.0%} 미만")
+    q = g("q_yoy")
+    if q is None or q < M.T_QTR_YOY_MIN:
+        why.append(f"최근 분기 YoY {M.T_QTR_YOY_MIN:.0%} 미만")
+    ch = g("opm_change")
+    if ch is None or ch < M.T_OPM_CHANGE_MIN:
+        why.append("영업이익률 2%p 초과 악화")
+    gpm = g("gpm")
+    if gpm is not None and gpm < M.T_GPM_MIN:
+        why.append(f"매출총이익률 {M.T_GPM_MIN:.0%} 미만")
+    d = g("dilution")
+    if d is None:
+        why.append("희석 데이터 없음")
+    elif d > M.T_DILUTION_MAX:
+        why.append(f"희석 {d:+.0%}")
+    if g("profitable"):
+        nd, nde = g("net_debt"), g("net_debt_ebitda")
+        if not (nd is not None and nd <= 0) and (nde is None or nde > M.T_NET_DEBT_EBITDA_MAX):
+            why.append(f"순부채/EBITDA {M.T_NET_DEBT_EBITDA_MAX:.0f}배 초과" if nde is not None else "부채 판정 불가")
+    else:
+        rw = g("runway_months")
+        if rw is None or rw < M.T_RUNWAY_MONTHS_MIN:
+            why.append("런웨이 24개월 미만" if rw is not None else "런웨이 판정 불가")
+    v, basis = valuation(c, "G")
+    if v is not None and v > M.VAL_G_EXTREME:
+        why.append(f"성장 대비 극단 고평가({v:.2f})")
+    return why
 
 
 def market_cap_shares(cover_shares, diluted_shares):
@@ -307,21 +399,30 @@ def run(companies):
     for c in companies:
         c["universe_fail"] = universe_reasons(c)
     universe = [c for c in companies if not c["universe_fail"]]
+    # 업종 통계·백분위는 G/C 유니버스(시총 200억 달러 이하)로만 계산한다. T 차선 대형주는 그 분포에 붙인다
+    core = [c for c in universe if (c.get("mkt_cap") or 0) <= M.MKT_CAP_MAX]
+    ext = [c for c in universe if (c.get("mkt_cap") or 0) > M.MKT_CAP_MAX]
 
-    # 유니버스 내 상대 지표
-    _industry_groups(universe)
-    med, p70, _ = _group_stats(universe, "gpm")
-    _, _, gpa_pct = _group_stats(universe, "gp_to_assets")
-    for c, p in zip(universe, gpa_pct):
+    _industry_groups(core)
+    if ext:
+        _industry_groups(ext, ref=core)
+    med, p70, _ = _group_stats(core, "gpm")
+    _, _, gpa_pct = _group_stats(core, "gp_to_assets")
+    gpa_ext = _pct_against(ext, core, "gp_to_assets")
+    for c, p in zip(core + ext, list(gpa_pct) + gpa_ext):
         c["ind_gpm_median"] = med.get(c["ind_group"])
         c["ind_gpm_p70"] = p70.get(c["ind_group"])
         c["gp_to_assets_ind_pct"] = None if p is None or (isinstance(p, float) and math.isnan(p)) else p
         cap = c.get("mkt_cap")
         c["fcf_yield"] = (c["fcf_ttm"] / cap) if (c.get("fcf_ttm") is not None and cap) else None
         c["ev"] = (cap + (c.get("net_debt") or 0)) if cap else None
-    fy_pct = _pct_rank([c.get("fcf_yield") for c in universe])
-    for c, p in zip(universe, fy_pct):
+    fy_pct = _pct_rank([c.get("fcf_yield") for c in core])
+    for c, p in zip(core, fy_pct):
         c["fcf_yield_pct"] = None if p is None or (isinstance(p, float) and math.isnan(p)) else p
+    core_fy = sorted(c["fcf_yield"] for c in core if c.get("fcf_yield") is not None)
+    for c in ext:
+        fy = c.get("fcf_yield")
+        c["fcf_yield_pct"] = None if fy is None or not core_fy else bisect.bisect_right(core_fy, fy) / len(core_fy)
 
     for c in universe:
         ok, lane, reasons = hard_filter(c)
@@ -338,6 +439,12 @@ def entry_tags(c):
     apply_valuation(c)   # 밸류 태그는 메일의 밸류 칸과 CSV val_tag에 표시
     if is_cyclical(c):
         tags.append("경기 민감 업종")
+    if c.get("lane") == "T":
+        if (c.get("dilution") or 0) >= M.T_DILUTION_WARN:
+            tags.append("희석 주의")
+        nde = c.get("net_debt_ebitda")
+        if (c.get("net_debt") or 0) > 0 and nde is not None and nde > M.T_DEBT_WARN:
+            tags.append("부채 주의")
     if c.get("gpm") is None:
         tags.append("매출총이익률 미공시")
     p, hi, lo, ma = c.get("price"), c.get("hi52"), c.get("lo52"), c.get("ma200")

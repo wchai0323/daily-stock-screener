@@ -17,7 +17,7 @@ RESULT_COLS = [
 SNAPSHOT_COLS = [
     "ticker", "cik", "name", "exchange", "sic", "country", "mkt_cap", "price", "adv20", "revenue_ttm",
     "rev_growth", "q_yoy", "accel", "gpm", "gpm_prev", "gp_growth", "opm", "opm_change", "fcf_ttm",
-    "fcf_yield", "dilution", "net_debt", "net_debt_ebitda", "runway_months", "op_asset_growth",
+    "fcf_margin", "fcf_yield", "dilution", "net_debt", "net_debt_ebitda", "runway_months", "op_asset_growth",
     "gp_to_assets", "period_end", "latest_filed", "fcf_yield_pct", "pass", "lane", "auto_score", "fail",
     "criteria_version",
 ]
@@ -274,15 +274,39 @@ CAND_HEAD = ["종목", "섹터 / 업종", "차선", "자동점수", "시총", "�
              "매출총이익률", "영업이익률", "희석", "진입 참고"]
 
 
-def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
+def _watch_rows(watch, by_ticker, watch_px):
+    """고정 관심종목: 필터 판정 + 주가 위치. SEC 분기 데이터가 없는 해외 발행사·신규 상장주도 주가는 보여준다."""
+    rows = []
+    for t in sorted(watch):
+        c = by_ticker.get(t) or {}
+        px = dict(c)
+        px.update({k: v for k, v in (watch_px or {}).get(t, {}).items() if px.get(k) is None})
+        if c.get("pass"):
+            status = f"<b style='color:#1F6F3F'>{_e(c['lane'])}차선 통과</b> · {c.get('auto_score', 0):.0f}/{_M().AUTO_SCORE_MAX}"
+        elif c:
+            status = "<span style='color:#C00000'>미통과</span><br><span style='color:#666'>" + _e("; ".join(c.get("fail") or [])[:160]) + "</span>"
+        else:
+            status = "<span style='color:#888'>판정 불가 (SEC 10-Q 분기 데이터 없음: 해외 발행사·신규 상장 등)</span>"
+        p, hi, lo, ma = px.get("price"), px.get("hi52"), px.get("lo52"), px.get("ma200")
+        pos = f"{(p - lo) / (hi - lo):.0%}" if (p and hi and lo and hi > lo) else "–"
+        vs_ma = f"{p / ma - 1:+.0%}" if (p and ma) else "–"
+        rows.append([f"<b>{_e(t)}</b>", status, "–" if p is None else f"${p:,.2f}", _cap(c.get("mkt_cap")), pos, vs_ma])
+    return rows
+
+
+def render(day, prev_day, passed, new, exits, holdings, all_today, stats, watch=None, watch_px=None):
     passed = sorted(passed, key=lambda c: -(c.get("auto_score") or 0))
+    passed_t = [c for c in passed if c["lane"] == "T"]
+    passed_gc = [c for c in passed if c["lane"] != "T"]
     by_ticker = {c["ticker"]: c for c in all_today}
     parts = [f"<div style='font-family:Malgun Gothic,Apple SD Gothic Neo,Arial,sans-serif;color:#222;max-width:960px'>"]
     parts.append(f"<h1 style='font-size:20px;color:#1F3864;margin:0'>{_M().TITLE} · {day}</h1>")
     n_g = sum(1 for c in passed if c["lane"] == "G")
-    n_c = len(passed) - n_g
+    n_c = sum(1 for c in passed if c["lane"] == "C")
+    n_t = len(passed_t)
     n_pri = sum(1 for c in passed if c.get("priority"))
-    line = (f"유니버스 {stats['universe']:,}개 중 <b>{len(passed)}개 통과</b> (G {n_g} · C {n_c}), "
+    lanes = f"G {n_g} · C {n_c}" + (f" · T {n_t}" if passed_t or getattr(_M(), "T_LANE_ENABLED", False) else "")
+    line = (f"유니버스 {stats['universe']:,}개 중 <b>{len(passed)}개 통과</b> ({lanes}), "
             f"1순위 후보(자동점수 {_M().PRIORITY_SCORE_PCT:.0%} 이상) <b>{n_pri}개</b>.")
     if new is not None:
         line += f" 전일({prev_day}) 대비 신규 <b>{len(new)}</b> · 이탈 <b>{len(exits)}</b>"
@@ -331,14 +355,33 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats):
         else:
             parts.append("<p style='font-size:12px;color:#666'>없음</p>")
 
-    parts.append(f"<h2 {H2}>자동점수 상위 {min(_M().TOP_N, len(passed))}</h2>")
+    if watch:
+        parts.append(f"<h2 {H2}>고정 관심종목 ({len(watch)})</h2>")
+        parts.append("<p style='margin:2px 0;font-size:11px;color:#666'>config/watchlist.txt 목록. "
+                     "52주 위치 = (주가 − 52주 최저) ÷ (최고 − 최저).</p>")
+        parts.append(_table(["종목", "판정", "주가", "시총", "52주 위치", "200일선 대비"],
+                            _watch_rows(watch, by_ticker, watch_px)))
+
+    parts.append(f"<h2 {H2}>G·C 차선 자동점수 상위 {min(_M().TOP_N, len(passed_gc))}</h2>")
     parts.append(f"<p style='margin:2px 0;font-size:11px;color:#666'>★ = 1순위 후보. 업종 = {_M().INDUSTRY_LABEL} "
                  f"매출총이익률 40백분위(G 차선 흑자 기준선). 진입 참고는 점수가 아닌 분할매수 속도 참고용. "
                  f"성장 대비 밸류 = G 차선 EV/매출총이익(미공시면 EV/영업이익) ÷ 매출성장률(%), C 차선 EV/FCF ÷ 매출성장률(%), 성장률 최대 100%. "
                  f"G {_M().VAL_G_CHEAP} 미만 저평가 · {_M().VAL_G_RICH} 이상 고평가 · {_M().VAL_G_EXTREME} 초과 1층 탈락, "
                  f"C {_M().VAL_C_CHEAP} 미만 저평가 · {_M().VAL_C_RICH} 이상 고평가. "
                  f"{_e(_M().VALUATION_NOTE)}</p>")
-    parts.append(_table(CAND_HEAD, _cand_rows(passed[:_M().TOP_N], holdings)))
+    parts.append(_table(CAND_HEAD, _cand_rows(passed_gc[:_M().TOP_N], holdings)))
+    if getattr(_M(), "T_LANE_ENABLED", False):
+        M_ = _M()
+        parts.append(f"<h2 {H2}>T 차선 (하드웨어 성장) 상위 {min(M_.T_TOP_N, n_t)} / {n_t}</h2>")
+        parts.append(f"<p style='margin:2px 0;font-size:11px;color:#666'>G·C를 통과하지 못한 기계·전자·계측·전문건설 업종(의료기기 제외) 중 "
+                     f"매출 성장 {M_.T_REV_GROWTH_MIN:.0%}+, 최근 분기 YoY {M_.T_QTR_YOY_MIN:.0%}+, 영업이익률 {abs(M_.T_OPM_CHANGE_MIN) * 100:.0f}%p 초과 악화 없음, "
+                     f"매출총이익률 {M_.T_GPM_MIN:.0%}+, 희석 {M_.T_DILUTION_MAX:.0%} 이하, 순부채/EBITDA {M_.T_NET_DEBT_EBITDA_MAX:.0f}배 이하(적자면 런웨이 {M_.T_RUNWAY_MONTHS_MIN}개월+), "
+                     f"시총 {M_.fmt_money(M_.MKT_CAP_MIN)}~{M_.fmt_money(M_.T_MKT_CAP_MAX)}. "
+                     f"자동점수·밸류 구간은 G 차선과 같음. 희석 {M_.T_DILUTION_WARN:.0%}+ '희석 주의', 순부채/EBITDA {M_.T_DEBT_WARN:.0f}배 초과 '부채 주의'.</p>")
+        if passed_t:
+            parts.append(_table(CAND_HEAD, _cand_rows(passed_t[:M_.T_TOP_N], holdings)))
+        else:
+            parts.append("<p style='font-size:12px;color:#666'>없음</p>")
     parts.append("<p style='font-size:11px;color:#777'>전체 통과 종목과 항목별 점수는 첨부 CSV에 있습니다. "
                  f"남은 2층 {_M().SCORE_TOTAL - _M().AUTO_SCORE_MAX}점(잔고·역DCF·TAM·경영진·내부자·가이던스·기관"
                  f"{'' if _M().USE_SHORT else '·공매도'})과 3·4층은 체크리스트 검증 단계에서 채웁니다.</p>")
