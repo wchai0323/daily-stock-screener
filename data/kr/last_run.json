@@ -1,11 +1,11 @@
 {
- "run_at_utc": "2026-11-10T15:47:10+00:00",
- "screen_date": "2026-11-11",
+ "run_at_utc": "2026-11-11T15:34:06+00:00",
+ "screen_date": "2026-11-12",
  "dart_corps_with_stock_code": 3939,
- "with_prices": 2584,
- "liquid_candidates": 787,
- "with_8q_financials": 692,
- "universe": 539,
+ "with_prices": 2585,
+ "liquid_candidates": 785,
+ "with_8q_financials": 689,
+ "universe": 542,
  "passed": 34,
  "lanes": {
   "G": 15,
@@ -16,14 +16,14 @@
  "listed_now": 2589,
  "prices": {
   "requested": 2589,
-  "naver_ok": 2584,
+  "naver_ok": 2585,
   "naver_errors": 0,
   "naver_first_error": null,
-  "yahoo_fallback_requested": 5,
+  "yahoo_fallback_requested": 4,
   "yahoo_fallback_ok": 0,
-  "received": 2584
+  "received": 2585
  },
- "dart_calls": 77,
+ "dart_calls": 171,
  "dart_budget_hit": null,
  "mail": "sent",
  "yahoo": {
@@ -40,7 +40,7 @@
   ],
   "filled_short_pct_float": 0,
   "filled_pe_ttm": 0,
-  "filled_pe_fwd": 21,
+  "filled_pe_fwd": 20,
   "filled_peg": 1,
   "filled_sector": 27,
   "filled_industry": 27
