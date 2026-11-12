@@ -199,8 +199,12 @@ def build_compact(obj, schedule):
 
 
 def main():
-    today = dt.datetime.now(ZoneInfo("Asia/Seoul")).date()
-    log(f"실행일(한국) {today}")
+    now_local = dt.datetime.now(ZoneInfo("Asia/Seoul"))
+    today = store.market_date(now_local, 9)
+    log(f"실행 시각(한국) {now_local:%Y-%m-%d %H:%M} → 기준일 {today}")
+    if store.already_sent(today) and not os.environ.get("FORCE"):
+        log("이 날짜 메일은 이미 발송됨 — 중복 실행이라 종료합니다 (다시 보내려면 force)")
+        return 0
     screen.use(markets.korea())
     started = time.time()
     client = dart.DartClient(budget=K.DART_DAILY_BUDGET, deadline=started + K.DART_TIME_LIMIT_MIN * 60)
@@ -450,7 +454,7 @@ def main():
                                          "C": sum(c["lane"] == "C" for c in passed)},
         "new": None if new is None else len(new), "exits": None if exits is None else len(exits),
         "listed_now": len(listed), "prices": dict(kr_prices.LAST_DIAG),
-        "dart_calls": client.count, "dart_budget_hit": budget_hit, "mail": mail_status, "yahoo": yahoo_diag,
+        "dart_calls": client.count, "dart_budget_hit": budget_hit, "mail": mail_status, "date": today.isoformat(), "yahoo": yahoo_diag,
     })
     log(f"완료 (DART 호출 {client.count:,}건, 메일 {mail_status})")
     return 0

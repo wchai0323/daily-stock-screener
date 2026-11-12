@@ -405,3 +405,19 @@ def test_t_lane_rules():
     c = dict(base, lane="T", dilution=0.20, net_debt=5e8, net_debt_ebitda=2.6)
     tags = screen.entry_tags(c)
     assert "희석 주의" in tags and "부채 주의" in tags
+
+
+def test_market_date_and_duplicate_guard(tmp_path, monkeypatch):
+    import datetime as dt
+    import importlib
+    import json
+    monkeypatch.setenv("SCREENER_DATA_DIR", str(tmp_path))
+    import screener.store as store
+    importlib.reload(store)
+    # 한국 목요일 00:30 실행(지연) → 수요일 장 기준, 토요일 실행 → 금요일
+    assert store.market_date(dt.datetime(2026, 11, 12, 0, 30), 9) == dt.date(2026, 11, 11)
+    assert store.market_date(dt.datetime(2026, 11, 12, 16, 0), 9) == dt.date(2026, 11, 12)
+    assert store.market_date(dt.datetime(2026, 11, 14, 10, 0), 9) == dt.date(2026, 11, 13)
+    assert store.market_date(dt.datetime(2026, 11, 16, 3, 0), 9) == dt.date(2026, 11, 13)
+    (tmp_path / "last_run.json").write_text(json.dumps({"date": "2026-11-11", "mail": "sent"}))
+    assert store.already_sent(dt.date(2026, 11, 11)) and not store.already_sent(dt.date(2026, 11, 12))

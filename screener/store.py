@@ -80,6 +80,29 @@ def previous_results(day: dt.date):
     return files[-1].stem, pd.read_csv(files[-1])
 
 
+def market_date(now_local, open_hour):
+    """장 기준 날짜. 실행이 늦어져 다음 날 장 시작 전에 돌아도 직전 거래일로 본다 (주말도 건너뜀)."""
+    import datetime as _dt
+    d = now_local.date()
+    if now_local.hour < open_hour:
+        d -= _dt.timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= _dt.timedelta(days=1)
+    return d
+
+
+def already_sent(day):
+    """이 날짜 메일을 이미 보냈는지 (예약 실행이 여러 번 와도 한 번만 보내기 위해)."""
+    path = ROOT / "last_run.json"
+    if not path.exists():
+        return False
+    try:
+        js = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        return False
+    return js.get("date") == day.isoformat() and js.get("mail") == "sent"
+
+
 def save_run_summary(summary):
     """data/last_run.json: 가장 최근 실행 요약 (커밋됨)."""
     ROOT.mkdir(parents=True, exist_ok=True)

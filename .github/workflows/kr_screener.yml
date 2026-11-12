@@ -2,8 +2,9 @@ name: Korea Stock Screener
 
 on:
   schedule:
-    # 한국 장 마감 후 실행: UTC 07:30 (월~금) = 한국시간 16:30
-    - cron: "30 7 * * 1-5"
+    # 정시 실행은 외부 예약(Claude 예약 작업)이 맡고, GitHub 예약은 지연 대비 예비용.
+    - cron: "43 6 * * 1-5"
+    - cron: "13 8 * * 1-5"
   workflow_dispatch:
     inputs:
       max_companies:
@@ -12,6 +13,10 @@ on:
         default: ""
       skip_mail:
         description: "메일 발송 생략"
+        type: boolean
+        default: false
+      force:
+        description: "이미 보낸 날짜여도 다시 실행"
         type: boolean
         default: false
 
@@ -53,6 +58,7 @@ jobs:
           MAIL_TO: ${{ secrets.MAIL_TO }}
           MAX_COMPANIES: ${{ inputs.max_companies }}
           SKIP_MAIL: ${{ inputs.skip_mail && '1' || '' }}
+          FORCE: ${{ inputs.force && '1' || '' }}
         run: python -m screener.kr_main
 
       - name: DART 재무 캐시 저장 (실패해도 진행분 보존)
