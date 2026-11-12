@@ -1,0 +1,48 @@
+name: Resend mail
+
+# 지난 실행의 메일 본문(보관 14일)을 다시 보낸다. 받는 사람은 지금의 MAIL_TO 시크릿.
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "메일 날짜 (YYYY-MM-DD, 메일 제목의 날짜)"
+        required: true
+      market:
+        description: "us / kr / both"
+        default: both
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  resend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 재발송
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DATE: ${{ inputs.date }}
+          MARKET: ${{ inputs.market }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: |
+          set -e
+          send() {  # $1 워크플로 파일, $2 아티팩트 접두어, $3 제목 머리말, $4 결과 CSV
+            id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$1" --status success -L 50 \
+                   --json databaseId,createdAt -q "[.[] | select(.createdAt | startswith(\"$DATE\"))][0].databaseId")
+            if [ -z "$id" ]; then echo "::error::$1 $DATE 실행을 찾지 못했습니다"; return 1; fi
+            rm -rf mail && gh run download "$id" --repo "$GITHUB_REPOSITORY" -n "$2-$id" -D mail
+            n=$(python -c "import csv,sys;print(sum(1 for _ in csv.DictReader(open('$4',encoding='utf-8-sig'))))" 2>/dev/null || echo "?")
+            python tools/resend.py mail/latest.html "$3 $DATE · 통과 $n (재발송)" "$4"
+          }
+          if [ "$MARKET" != "kr" ]; then send screener.yml screener-mail "[스크리너]" "data/results/$DATE.csv"; fi
+          if [ "$MARKET" != "us" ]; then send kr_screener.yml kr-screener-mail "[한국 스크리너]" "data/kr/results/$DATE.csv"; fi
