@@ -37,10 +37,15 @@ jobs:
         run: |
           set -e
           send() {  # $1 워크플로 파일, $2 아티팩트 접두어, $3 제목 머리말, $4 결과 CSV
-            id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$1" --status success -L 50 \
-                   --json databaseId,createdAt -q "[.[] | select(.createdAt | startswith(\"$DATE\"))][0].databaseId")
-            if [ -z "$id" ]; then echo "::error::$1 $DATE 실행을 찾지 못했습니다"; return 1; fi
-            rm -rf mail && gh run download "$id" --repo "$GITHUB_REPOSITORY" -n "$2-$id" -D mail
+            # 예약 실행이 몇 시간씩 늦어 실행 시각으로는 날짜를 알 수 없다 → 최근 실행의 메일 본문에서 날짜를 찾는다
+            found=""
+            for id in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$1" --status success -L 15 --json databaseId -q '.[].databaseId'); do
+              rm -rf mail
+              gh run download "$id" --repo "$GITHUB_REPOSITORY" -n "$2-$id" -D mail 2>/dev/null || continue
+              if grep -q "· $DATE</h1>" mail/latest.html; then found=$id; break; fi
+            done
+            if [ -z "$found" ]; then echo "::error::$1 $DATE 메일 본문을 찾지 못했습니다"; return 1; fi
+            echo "실행 $found 의 메일 본문을 다시 보냅니다"
             n=$(python -c "import csv,sys;print(sum(1 for _ in csv.DictReader(open('$4',encoding='utf-8-sig'))))" 2>/dev/null || echo "?")
             python tools/resend.py mail/latest.html "$3 $DATE · 통과 $n (재발송)" "$4"
           }
