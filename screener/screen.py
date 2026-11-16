@@ -385,12 +385,6 @@ def score(passed):
             s["S12"] = next((pts for hi, pts in bands if v < hi), 0)
         cap = c.get("mkt_cap") or 0
         s["S13"] = next((pts for lim, pts in M.CAP_BANDS if cap < lim), getattr(M, "CAP_FLOOR", 1))
-        # S19 사이클 감점 (2026-11-16, 미국만): 최근 10-K 연간 매출이 한 해라도 크게 줄었으면 감점.
-        # 지금의 성장·마진 개선이 바닥에서의 반등(기저 효과)일 수 있고, 다음 하강기에 다시 꺾일 수 있다
-        bands = getattr(M, "CYCLE_PENALTY_BANDS", None)
-        if bands:
-            dd = c.get("rev_max_decline")
-            s["S19"] = next((pts for lo, pts in bands if dd is not None and dd >= lo), 0)
         if M.USE_SHORT:
             si = c.get("short_pct_float")
             s["S18s"] = 0 if si is None else (3 if si < 0.05 else 1 if si < 0.10 else 0)
@@ -453,7 +447,10 @@ def entry_tags(c):
             tags.append("부채 주의")
     if c.get("gpm") is None:
         tags.append("매출총이익률 미공시")
-    if (c.get("rev_max_decline") or 0) >= 0.10:
+    # 최근 10-K 연간 매출이 한 해라도 10% 넘게 줄었으면 표시 (점수 아님): 지금의 성장·마진 개선이
+    # 바닥에서의 반등(기저 효과)일 수 있음. 점수화는 성과 검증 후 결정
+    lim = getattr(M, "REV_DECLINE_TAG", None)   # 미국만 (한국 설정에는 없음)
+    if lim is not None and (c.get("rev_max_decline") or 0) >= lim:
         tags.append(f"연매출 감소 이력 (최대 -{c['rev_max_decline']:.0%})")
     p, hi, lo, ma = c.get("price"), c.get("hi52"), c.get("lo52"), c.get("ma200")
     if p and hi and lo and hi > lo:

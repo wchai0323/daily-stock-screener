@@ -150,16 +150,18 @@ def test_g_lane_pass_and_scoring():
     assert 0 < good["auto_score"] <= 71
     assert good["scores"]["S8"] == 5   # 희석 0%
     assert good["scores"]["S13"] == 2   # 시총 $2B: 3/2/1/0 구간
-    assert good["scores"]["S19"] == 0   # 연매출 감소 이력 없음
+    assert "S19" not in good["scores"]
 
 
-def test_cycle_penalty_s19():
+def test_rev_decline_tag_only():
+    """연매출 감소 이력은 태그만 붙이고 점수는 바꾸지 않는다."""
     rows = [_company(f"C{i}", make_facts(REV, gpm=0.6), rev_max_decline=d)
-            for i, d in enumerate([0.05, 0.12, 0.26])] + _peers()
+            for i, d in enumerate([0.05, 0.26])] + _peers()
     screen.run(rows)
-    screen.score(rows[:3])
-    assert [c["scores"]["S19"] for c in rows[:3]] == [0, -3, -5]
-    assert any(t.startswith("연매출 감소 이력") for t in screen.entry_tags(rows[2]))
+    screen.score(rows[:2])
+    assert rows[0]["auto_score"] == rows[1]["auto_score"]
+    assert not any(t.startswith("연매출 감소 이력") for t in screen.entry_tags(rows[0]))
+    assert "연매출 감소 이력 (최대 -26%)" in screen.entry_tags(rows[1])
 
 
 def _restated_facts():

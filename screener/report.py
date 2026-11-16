@@ -12,7 +12,7 @@ RESULT_COLS = [
     "accel", "gpm", "ind_gpm_median", "opm", "opm_change", "fcf_margin", "fcf_yield", "dilution",
     "net_debt_ebitda", "runway_months", "rule_of_40", "short_pct_float", "price", "range_pos", "ma200_gap",
     "entry_tags", "period_end", "latest_filed", "ind_group", "sic",
-    "S1", "S2", "S3", "S5", "S6", "S7", "S8", "S9", "S10", "S12", "S13", "S18s", "S19",
+    "S1", "S2", "S3", "S5", "S6", "S7", "S8", "S9", "S10", "S12", "S13", "S18s",
     "rev_max_decline",
 ]
 SNAPSHOT_COLS = [
