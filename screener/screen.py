@@ -271,9 +271,20 @@ def valuation_tag(v, lane):
     return None
 
 
+def base_lane(c):
+    """R 차선 종목은 원래 통과한 차선(G·C·T) 기준으로 밸류·점수 구간을 쓴다."""
+    return c.get("base_lane") or c.get("lane") or "G"
+
+
+def r_lane(c):
+    """R 차선(반등): 1층을 통과했지만 최근 10-K 연간 매출이 한 해라도 REV_DECLINE_TAG 이상 줄었던 종목 (미국만).
+    지금의 성장·마진 개선이 바닥에서의 반등(기저 효과)일 수 있어 G·C·T 순위와 섞지 않고 따로 본다."""
+    return bool(getattr(M, "R_LANE_ENABLED", False)) and (c.get("rev_max_decline") or 0) >= M.REV_DECLINE_TAG
+
+
 def apply_valuation(c):
     """차선이 정해진 통과 종목에 밸류 값·근거·태그를 붙인다."""
-    lane = c.get("lane") or "G"
+    lane = base_lane(c)
     v, basis = valuation(c, lane)
     c["val_ratio"], c["val_basis"], c["val_tag"] = v, basis, valuation_tag(v, lane)
     return c
@@ -344,29 +355,11 @@ def _band(v, bands):
     return 0
 
 
-def _base_effect(c):
-    """기저 효과 보정 (2026-11-16, 미국만). 최근 10-K 연간 매출이 한 해라도 REV_DECLINE_TAG 이상 줄었으면
-    성장률·영업이익률 변화를 '전년 대비'와 '직전 고점 대비' 중 낮은 값으로 점수에 쓴다.
-    바닥에서의 반등(예: HLIT 2025년 매출 -26% 뒤 +54%)이 구조적 성장주보다 높은 점수를 받지 않게 한다."""
-    g, oc = c.get("rev_growth"), c.get("opm_change")
-    c["base_effect_adj"] = False
-    lim = getattr(M, "BASE_EFFECT_ADJUST", False) and getattr(M, "REV_DECLINE_TAG", None)
-    if lim and (c.get("rev_max_decline") or 0) >= lim:
-        gp, op = c.get("rev_growth_vs_peak"), c.get("opm_change_vs_peak")
-        if gp is not None and g is not None and gp < g:
-            g, c["base_effect_adj"] = gp, True
-        if op is not None and oc is not None and op < oc:
-            oc, c["base_effect_adj"] = op, True
-    c["growth_for_score"], c["opm_change_for_score"] = g, oc
-
-
 def score(passed):
     """1층 통과 종목 목록에 자동 점수를 붙인다 (미국 74점, 한국 71점 만점)."""
     if not passed:
         return
-    for c in passed:
-        _base_effect(c)
-    rg_pct = _pct_rank([c.get("growth_for_score") for c in passed])
+    rg_pct = _pct_rank([c.get("rev_growth") for c in passed])
     for c, rp in zip(passed, rg_pct):
         s = {}
         s["S1"] = round((rp or 0) * 8, 1)
@@ -374,10 +367,10 @@ def score(passed):
         s["S3"] = 4 if (c.get("gp_growth") is not None and c.get("rev_growth") is not None
                          and c["gp_growth"] >= c["rev_growth"]) else 0
         s["S5"] = round((c.get("gp_to_assets_ind_pct") or 0) * 8, 1)
-        s["S6"] = _band(c.get("opm_change_for_score"), [(0.05, 7), (0.02, 4), (0.0, 1)])
+        s["S6"] = _band(c.get("opm_change"), [(0.05, 7), (0.02, 4), (0.0, 1)])
         r40 = None
-        if c.get("growth_for_score") is not None and c.get("fcf_margin") is not None:
-            r40 = (c["growth_for_score"] + c["fcf_margin"]) * 100
+        if c.get("rev_growth") is not None and c.get("fcf_margin") is not None:
+            r40 = (c["rev_growth"] + c["fcf_margin"]) * 100
         c["rule_of_40"] = r40
         s["S7"] = _band(r40, [(60, 5), (40, 3)])
         d = c.get("dilution")
@@ -399,7 +392,7 @@ def score(passed):
         if v is None:
             s["S12"] = M.S12_MISSING
         else:
-            bands = M.S12_C_BANDS if c["lane"] == "C" else M.S12_G_BANDS
+            bands = M.S12_C_BANDS if base_lane(c) == "C" else M.S12_G_BANDS
             s["S12"] = next((pts for hi, pts in bands if v < hi), 0)
         cap = c.get("mkt_cap") or 0
         s["S13"] = next((pts for lim, pts in M.CAP_BANDS if cap < lim), getattr(M, "CAP_FLOOR", 1))
@@ -445,6 +438,9 @@ def run(companies):
     for c in universe:
         ok, lane, reasons = hard_filter(c)
         c["pass"], c["lane"], c["fail"] = ok, lane, reasons
+        c["base_lane"] = lane
+        if ok and r_lane(c):
+            c["lane"] = "R"
     for c in companies:
         if c["universe_fail"]:
             c["pass"], c["lane"], c["fail"] = False, None, c["universe_fail"]
@@ -457,7 +453,7 @@ def entry_tags(c):
     apply_valuation(c)   # 밸류 태그는 메일의 밸류 칸과 CSV val_tag에 표시
     if is_cyclical(c):
         tags.append("경기 민감 업종")
-    if c.get("lane") == "T":
+    if base_lane(c) == "T":
         if (c.get("dilution") or 0) >= M.T_DILUTION_WARN:
             tags.append("희석 주의")
         nde = c.get("net_debt_ebitda")
@@ -465,11 +461,13 @@ def entry_tags(c):
             tags.append("부채 주의")
     if c.get("gpm") is None:
         tags.append("매출총이익률 미공시")
-    # 최근 10-K 연간 매출이 한 해라도 10% 넘게 줄었으면 표시: 지금의 성장·마진 개선이
-    # 바닥에서의 반등(기저 효과)일 수 있음. 미국은 점수도 보정 (_base_effect)
-    lim = getattr(M, "REV_DECLINE_TAG", None)   # 미국만 (한국 설정에는 없음)
+    # 최근 10-K 연간 매출이 한 해라도 10% 넘게 줄었으면 표시 (미국은 이 종목들이 R 차선)
+    lim = getattr(M, "REV_DECLINE_TAG", None)
     if lim is not None and (c.get("rev_max_decline") or 0) >= lim:
         tags.append(f"연매출 감소 이력 (최대 -{c['rev_max_decline']:.0%})")
+        gp, op = c.get("rev_growth_vs_peak"), c.get("opm_change_vs_peak")
+        if gp is not None:
+            tags.append(f"직전 고점 대비 매출 연 {gp:+.0%}" + ("" if op is None else f", 영업이익률 {op * 100:+.1f}%p"))
     p, hi, lo, ma = c.get("price"), c.get("hi52"), c.get("lo52"), c.get("ma200")
     if p and hi and lo and hi > lo:
         c["range_pos"] = (p - lo) / (hi - lo)

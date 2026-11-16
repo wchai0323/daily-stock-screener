@@ -245,7 +245,7 @@ def main():
         "with_prices": len(px),
         "universe": len(universe),
         "passed": len(passed),
-        "lanes": {"G": sum(c["lane"] == "G" for c in passed), "C": sum(c["lane"] == "C" for c in passed)},
+        "lanes": {k: sum(c["lane"] == k for c in passed) for k in ("G", "C", "T", "R")},
         "priority": sum(bool(c.get("priority")) for c in passed),
         "new": None if new is None else len(new),
         "exits": None if exits is None else len(exits),

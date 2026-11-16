@@ -153,20 +153,24 @@ def test_g_lane_pass_and_scoring():
     assert "S19" not in good["scores"]
 
 
-def test_base_effect_adjustment():
-    """연매출 감소 이력(10%+)이 있으면 S1·S6·S7을 직전 고점 대비 값으로 매긴다. 감소 이력이 작으면 그대로."""
+def test_r_lane_for_rebounds():
+    """1층 통과 + 연매출 감소 이력(10%+) → R 차선. 점수는 그대로, 원래 차선은 base_lane에."""
     kw = dict(rev_growth_vs_peak=0.05, opm_change_vs_peak=0.01)
     rows = [_company(f"C{i}", make_facts(REV, gpm=0.6), rev_max_decline=d, **kw)
             for i, d in enumerate([0.05, 0.26])] + _peers()
     screen.run(rows)
-    screen.score(rows[:2])
     small, big = rows[:2]
-    assert not small["base_effect_adj"] and big["base_effect_adj"]
-    assert big["growth_for_score"] == 0.05 and small["growth_for_score"] == small["rev_growth"]
-    assert big["scores"]["S6"] == 1 and big["scores"]["S7"] == 0
-    assert big["auto_score"] < small["auto_score"]
+    assert small["pass"] and big["pass"]
+    assert small["lane"] == "G" and big["lane"] == "R" and big["base_lane"] == "G"
+    screen.score([small, big])
+    assert big["auto_score"] == small["auto_score"]   # 감점 없음, 따로 순위만
     assert not any(t.startswith("연매출 감소 이력") for t in screen.entry_tags(small))
-    assert "연매출 감소 이력 (최대 -26%)" in screen.entry_tags(big)
+    tags = screen.entry_tags(big)
+    assert "연매출 감소 이력 (최대 -26%)" in tags
+    assert "직전 고점 대비 매출 연 +5%, 영업이익률 +1.0%p" in tags
+    html = report.render("2026-11-16", None, [small, big], None, None, set(), rows,
+                         {"universe": len(rows), "refreshed": 0})
+    assert "R 차선 (사이클 반등) 상위 1 / 1" in html and "G 1 · C 0" in html
 
 
 def test_vs_peak_metrics():

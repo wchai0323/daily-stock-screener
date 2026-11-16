@@ -13,7 +13,7 @@ RESULT_COLS = [
     "net_debt_ebitda", "runway_months", "rule_of_40", "short_pct_float", "price", "range_pos", "ma200_gap",
     "entry_tags", "period_end", "latest_filed", "ind_group", "sic",
     "S1", "S2", "S3", "S5", "S6", "S7", "S8", "S9", "S10", "S12", "S13", "S18s",
-    "rev_max_decline", "rev_growth_vs_peak", "opm_change_vs_peak", "base_effect_adj",
+    "base_lane", "rev_max_decline", "rev_growth_vs_peak", "opm_change_vs_peak",
 ]
 SNAPSHOT_COLS = [
     "ticker", "cik", "name", "exchange", "sic", "country", "mkt_cap", "price", "adv20", "revenue_ttm",
@@ -238,13 +238,14 @@ def _cause_badge(cause):
 
 
 def _summary_line(c):
-    bits = [f"{c['lane']}차선", f"매출 {_pct(c.get('rev_growth'), True)}"]
+    lane = f"R차선({c['base_lane']})" if c["lane"] == "R" and c.get("base_lane") else f"{c['lane']}차선"
+    bits = [lane, f"매출 {_pct(c.get('rev_growth'), True)}"]
     if c.get("val_tag"):
         bits.append(c["val_tag"])
     if c.get("accel") is not None:
         bits.append(f"가속 {c['accel'] * 100:+.0f}%p")
     bits.append(f"GPM {_pct(c.get('gpm'))}")
-    if c["lane"] == "C" and c.get("fcf_yield") is not None:
+    if (c.get("base_lane") or c["lane"]) == "C" and c.get("fcf_yield") is not None:
         bits.append(f"FCF수익률 {_pct(c['fcf_yield'], digits=1)}")
     return " · ".join(bits)
 
@@ -257,7 +258,7 @@ def _cand_rows(cands, holdings):
         rows.append([
             f"<b>{star}{_e(c['ticker'])}</b>{held}<br><span style='color:#666'>{_e((c.get('name') or '')[:28])}</span>",
             _class(c),
-            _e(c["lane"]),
+            _e(c["base_lane"] if c["lane"] == "R" and c.get("base_lane") else c["lane"]),
             f"<b>{c.get('auto_score', 0):.0f}</b>/{_M().AUTO_SCORE_MAX}",
             _cap(c.get("mkt_cap")),
             _valuation(c),
@@ -298,7 +299,8 @@ def _watch_rows(watch, by_ticker, watch_px):
 def render(day, prev_day, passed, new, exits, holdings, all_today, stats, watch=None, watch_px=None):
     passed = sorted(passed, key=lambda c: -(c.get("auto_score") or 0))
     passed_t = [c for c in passed if c["lane"] == "T"]
-    passed_gc = [c for c in passed if c["lane"] != "T"]
+    passed_r = [c for c in passed if c["lane"] == "R"]
+    passed_gc = [c for c in passed if c["lane"] in ("G", "C")]
     by_ticker = {c["ticker"]: c for c in all_today}
     parts = [f"<div style='font-family:Malgun Gothic,Apple SD Gothic Neo,Arial,sans-serif;color:#222;max-width:960px'>"]
     parts.append(f"<h1 style='font-size:20px;color:#1F3864;margin:0'>{_M().TITLE} · {day}</h1>")
@@ -306,7 +308,8 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats, watch=
     n_c = sum(1 for c in passed if c["lane"] == "C")
     n_t = len(passed_t)
     n_pri = sum(1 for c in passed if c.get("priority"))
-    lanes = f"G {n_g} · C {n_c}" + (f" · T {n_t}" if passed_t or getattr(_M(), "T_LANE_ENABLED", False) else "")
+    lanes = (f"G {n_g} · C {n_c}" + (f" · T {n_t}" if passed_t or getattr(_M(), "T_LANE_ENABLED", False) else "")
+             + (f" · R {len(passed_r)}" if passed_r or getattr(_M(), "R_LANE_ENABLED", False) else ""))
     line = (f"유니버스 {stats['universe']:,}개 중 <b>{len(passed)}개 통과</b> ({lanes}), "
             f"1순위 후보(자동점수 {_M().PRIORITY_SCORE_PCT:.0%} 이상) <b>{n_pri}개</b>.")
     if new is not None:
@@ -381,6 +384,18 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats, watch=
                      f"자동점수·밸류 구간은 G 차선과 같음. 희석 {M_.T_DILUTION_WARN:.0%}+ '희석 주의', 순부채/EBITDA {M_.T_DEBT_WARN:.0f}배 초과 '부채 주의'.</p>")
         if passed_t:
             parts.append(_table(CAND_HEAD, _cand_rows(passed_t[:M_.T_TOP_N], holdings)))
+        else:
+            parts.append("<p style='font-size:12px;color:#666'>없음</p>")
+    if getattr(_M(), "R_LANE_ENABLED", False):
+        M_ = _M()
+        n_r = len(passed_r)
+        parts.append(f"<h2 {H2}>R 차선 (사이클 반등) 상위 {min(M_.R_TOP_N, n_r)} / {n_r}</h2>")
+        parts.append(f"<p style='margin:2px 0;font-size:11px;color:#666'>G·C·T 중 하나를 통과했지만 최근 10-K 연간 매출이 한 해라도 "
+                     f"{M_.REV_DECLINE_TAG:.0%} 넘게 줄었던 종목. 지금의 성장·마진 개선이 바닥에서의 반등(기저 효과)일 수 있어 위 순위와 섞지 않음. "
+                     f"차선 칸은 원래 통과한 차선. 진입 참고의 '직전 고점 대비'는 최근 10-K 중 매출이 가장 컸던 해와 비교한 연환산 매출 성장과 영업이익률 변화, "
+                     f"PER 칸의 정상화 PER(10년 평균 순이익 기준)도 함께 볼 것.</p>")
+        if passed_r:
+            parts.append(_table(CAND_HEAD, _cand_rows(passed_r[:M_.R_TOP_N], holdings)))
         else:
             parts.append("<p style='font-size:12px;color:#666'>없음</p>")
     parts.append("<p style='font-size:11px;color:#777'>전체 통과 종목과 항목별 점수는 첨부 CSV에 있습니다. "
