@@ -31,11 +31,21 @@ def compute(series):
     if n < 8:
         return None
     m = {"quarters": n, "period_end": series["end"][-1]}
-    last4 = slice(n - 4, n)
-    prev4 = slice(n - 8, n - 4)
+    # 기본은 최근 4분기 vs 직전 4분기. 중단사업 재작성 등으로 그 안의 분기 하나가 기준 불일치(None)면
+    # 같은 기준인 최근 3분기 vs 전년 같은 3분기로 비교하고, 금액은 4/3배로 연환산한다.
+    revs = series["revenue"]
+    win = 4
+    if any(v is None for v in revs[n - 8:]):
+        if all(v is not None for v in revs[n - 3:] + revs[n - 7:n - 4]):
+            win = 3
+    m["ttm_basis_quarters"] = win
+    scale = 4 / win
+    last4 = slice(n - win, n)
+    prev4 = slice(n - 4 - win, n - 4)
 
     def ttm(name, sl=last4):
-        return _sum(series[name][sl])
+        v = _sum(series[name][sl])
+        return v * scale if v is not None else None
 
     rev, rev_p = ttm("revenue"), ttm("revenue", prev4)
     gp, gp_p = ttm("gross_profit"), ttm("gross_profit", prev4)
@@ -99,6 +109,11 @@ def compute(series):
     # 희석: 최근 분기 희석 가중평균 주식 수 vs 4분기 전
     m["dilution"] = _growth(series["diluted_shares"][last], series["diluted_shares"][year_ago])
     m["diluted_shares_last"] = series["diluted_shares"][last]
+
+    # 최근 10-K의 연간 매출(보통 3개 연도) 중 전년 대비 최대 감소율. 지금의 고성장이 직전 하락의 반등(기저 효과)인지 본다
+    ann = [v for _, v in series.get("annual_revenue") or []]
+    drops = [1 - b / a for a, b in zip(ann, ann[1:]) if a and a > 0 and b is not None]
+    m["rev_max_decline"] = max([0.0] + drops) if drops else None
 
     m["profitable"] = op is not None and op > 0
     if m["profitable"] and m["ebitda_ttm"] and m["ebitda_ttm"] > 0 and m["net_debt"] is not None:

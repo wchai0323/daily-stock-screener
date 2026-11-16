@@ -147,8 +147,67 @@ def test_g_lane_pass_and_scoring():
     assert good["pass"], good["fail"]
     assert good["lane"] == "G"
     screen.score([good])
-    assert 0 < good["auto_score"] <= 74
+    assert 0 < good["auto_score"] <= 71
     assert good["scores"]["S8"] == 5   # 희석 0%
+    assert good["scores"]["S13"] == 2   # 시총 $2B: 3/2/1/0 구간
+    assert good["scores"]["S19"] == 0   # 연매출 감소 이력 없음
+
+
+def test_cycle_penalty_s19():
+    rows = [_company(f"C{i}", make_facts(REV, gpm=0.6), rev_max_decline=d)
+            for i, d in enumerate([0.05, 0.12, 0.26])] + _peers()
+    screen.run(rows)
+    screen.score(rows[:3])
+    assert [c["scores"]["S19"] for c in rows[:3]] == [0, -3, -5]
+    assert any(t.startswith("연매출 감소 이력") for t in screen.entry_tags(rows[2]))
+
+
+def _restated_facts():
+    """2026-02 10-K에서 사업 매각으로 FY2024·FY2025 연간 매출을 70%로 재작성, 2025년 분기는 2026년 10-Q에서 재작성.
+    2024년 1~3분기 값은 재작성되지 않음 (실제 HLIT 사례와 같은 구조)."""
+    fj = make_facts(REV)
+    rows = fj["facts"]["us-gaap"]["Revenues"]["units"]["USD"]
+    for r in rows:
+        if r["start"] == "2025-01-01" and r["end"] == "2025-12-31":
+            r["val"] *= 0.7
+    rows.append({"start": "2024-01-01", "end": "2024-12-31", "val": sum(REV[:4]) * 0.7,
+                 "form": "10-K", "filed": "2026-02-04", "accn": "acc-2025-12-31"})
+    for (s, e), v, f in [(("2025-01-01", "2025-03-31"), REV[4], "2026-05-05"),
+                         (("2025-04-01", "2025-06-30"), REV[5], "2026-08-04")]:
+        rows.append({"start": s, "end": e, "val": v * 0.7, "form": "10-Q", "filed": f, "accn": f"acc-{f}"})
+    return fj
+
+
+def test_restated_annual_does_not_fabricate_q4():
+    c = facts.compact(_restated_facts())
+    s = facts.build_series(c)
+    i24, i25 = s["end"].index("2024-12-31"), s["end"].index("2025-12-31")
+    # 재작성된 FY2024 연간 - 재작성 안 된 1~3분기 → 만들지 않는다 (예전에는 70%*4 - 3 = 엉뚱한 값)
+    assert s["revenue"][i24] is None
+    assert s["op_income"][i24] is None
+    # 같은 기준(재작성 후)끼리는 정상 계산: FY2025 연간(70%) - 재작성된 1·2분기 - 3분기
+    assert s["revenue"][i25] == pytest.approx(sum(REV[4:8]) * 0.7 - REV[4] * 0.7 - REV[5] * 0.7 - REV[6])
+    # 태그만 같고 값이 안 바뀐 일반 공시는 영향 없음
+    assert facts.build_series(facts.compact(make_facts(REV)))["revenue"][3] == pytest.approx(REV[3])
+
+
+def test_metrics_three_quarter_fallback():
+    """8분기 창 안에 기준 불일치 분기(None)가 있으면 최근 3분기 vs 전년 같은 3분기로 계산하고 금액은 연환산."""
+    s = facts.build_series(facts.compact(make_facts(REV)))
+    s["revenue"][len(s["end"]) - 8] = None
+    m = metrics.compute(s)
+    assert m["ttm_basis_quarters"] == 3
+    assert m["rev_growth"] == pytest.approx(sum(REV[-3:]) / sum(REV[-7:-4]) - 1)
+    assert m["revenue_ttm"] == pytest.approx(sum(REV[-3:]) * 4 / 3)
+    assert metrics.compute(facts.build_series(facts.compact(make_facts(REV))))["ttm_basis_quarters"] == 4
+
+
+def test_rev_max_decline():
+    s = facts.build_series(facts.compact(make_facts(REV)))
+    s["annual_revenue"] = [("2023-12-31", 388e6), ("2024-12-31", 488e6), ("2025-12-31", 361e6)]
+    assert metrics.compute(s)["rev_max_decline"] == pytest.approx(1 - 361 / 488)
+    s["annual_revenue"] = [("2024-12-31", 100e6), ("2025-12-31", 120e6)]
+    assert metrics.compute(s)["rev_max_decline"] == 0.0
 
 
 def test_dilution_and_low_margin_fail():

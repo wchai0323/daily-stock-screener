@@ -12,13 +12,14 @@ RESULT_COLS = [
     "accel", "gpm", "ind_gpm_median", "opm", "opm_change", "fcf_margin", "fcf_yield", "dilution",
     "net_debt_ebitda", "runway_months", "rule_of_40", "short_pct_float", "price", "range_pos", "ma200_gap",
     "entry_tags", "period_end", "latest_filed", "ind_group", "sic",
-    "S1", "S2", "S3", "S5", "S6", "S7", "S8", "S9", "S10", "S12", "S13", "S18s",
+    "S1", "S2", "S3", "S5", "S6", "S7", "S8", "S9", "S10", "S12", "S13", "S18s", "S19",
+    "rev_max_decline",
 ]
 SNAPSHOT_COLS = [
     "ticker", "cik", "name", "exchange", "sic", "country", "mkt_cap", "price", "adv20", "revenue_ttm",
     "rev_growth", "q_yoy", "accel", "gpm", "gpm_prev", "gp_growth", "opm", "opm_change", "fcf_ttm",
     "fcf_margin", "fcf_yield", "dilution", "net_debt", "net_debt_ebitda", "runway_months", "op_asset_growth",
-    "gp_to_assets", "period_end", "latest_filed", "fcf_yield_pct", "pass", "lane", "auto_score", "fail",
+    "gp_to_assets", "rev_max_decline", "period_end", "latest_filed", "fcf_yield_pct", "pass", "lane", "auto_score", "fail",
     "criteria_version",
 ]
 # 재무에서 나오는 지표 (같은 분기인데 이 값이 바뀌면 정정 공시)

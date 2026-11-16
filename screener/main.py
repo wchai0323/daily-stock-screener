@@ -60,7 +60,8 @@ def refresh_company(client, cik, existing, today):
     if need_meta:
         series = facts.build_series(comp)
         rev = series["revenue"][-4:]
-        if len(rev) == 4 and sum(rev) >= C.REVENUE_TTM_MIN:
+        known = [v for v in rev if v is not None]   # 기준 불일치 분기(None)는 빼고 연환산
+        if len(rev) == 4 and known and sum(known) * 4 / len(known) >= C.REVENUE_TTM_MIN:
             sub = client.submissions(cik)
             if sub:
                 addr = (sub.get("addresses") or {}).get("business") or {}
