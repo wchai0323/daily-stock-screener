@@ -237,6 +237,24 @@ def _cause_badge(cause):
     return f"<b style='color:{color}'>{_e(cause)}</b>"
 
 
+LANE_NAMES = {
+    "G": "Growth(고성장): 매출 성장 25%+, 매출총이익률 업종 40백분위+",
+    "C": "Cash flow(현금창출): 성장 10%+, FCF 수익률 상위 30%, 영업흑자",
+    "T": "Tech hardware(하드웨어 성장): G·C 탈락 기계·전자·계측·전문건설, 성장 15%+",
+    "R": "Rebound(사이클 반등): 통과 종목 중 최근 10-K 연매출이 한 해라도 10%+ 감소",
+}
+
+
+def lane_legend():
+    """메일 상단 차선 약자 설명. 시장 설정에 켜진 차선만."""
+    keys = ["G", "C"]
+    if getattr(_M(), "T_LANE_ENABLED", False):
+        keys.append("T")
+    if getattr(_M(), "R_LANE_ENABLED", False):
+        keys.append("R")
+    return "차선 · " + " / ".join(f"{k} = {LANE_NAMES[k]}" for k in keys)
+
+
 def _summary_line(c):
     lane = f"R차선({c['base_lane']})" if c["lane"] == "R" and c.get("base_lane") else f"{c['lane']}차선"
     bits = [lane, f"매출 {_pct(c.get('rev_growth'), True)}"]
@@ -321,6 +339,7 @@ def render(day, prev_day, passed, new, exits, holdings, all_today, stats, watch=
     else:
         line += " 첫 실행이라 전일 비교가 없습니다."
     parts.append(f"<p style='margin:6px 0 2px'>{line}</p>")
+    parts.append(f"<p style='margin:2px 0;color:#555;font-size:11px'>{_e(lane_legend())}</p>")
     parts.append(f"<p style='margin:0;color:#777;font-size:11px'>오늘 재무 갱신 {stats['refreshed']}개 기업 · "
                  f"{_M().SOURCE_NOTE} · "
                  f"자동점수는 2층 {_M().SCORE_TOTAL}점 중 자동 계산 가능한 {_M().AUTO_SCORE_MAX}점 기준</p>")

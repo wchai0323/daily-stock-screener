@@ -171,6 +171,7 @@ def test_r_lane_for_rebounds():
     html = report.render("2026-11-16", None, [small, big], None, None, set(), rows,
                          {"universe": len(rows), "refreshed": 0})
     assert "R 차선 (사이클 반등) 상위 1 / 1" in html and "G 1 · C 0" in html
+    assert "R = Rebound(사이클 반등)" in html and "G = Growth(고성장)" in html
 
 
 def test_vs_peak_metrics():
