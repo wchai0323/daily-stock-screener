@@ -344,11 +344,29 @@ def _band(v, bands):
     return 0
 
 
+def _base_effect(c):
+    """기저 효과 보정 (2026-11-16, 미국만). 최근 10-K 연간 매출이 한 해라도 REV_DECLINE_TAG 이상 줄었으면
+    성장률·영업이익률 변화를 '전년 대비'와 '직전 고점 대비' 중 낮은 값으로 점수에 쓴다.
+    바닥에서의 반등(예: HLIT 2025년 매출 -26% 뒤 +54%)이 구조적 성장주보다 높은 점수를 받지 않게 한다."""
+    g, oc = c.get("rev_growth"), c.get("opm_change")
+    c["base_effect_adj"] = False
+    lim = getattr(M, "BASE_EFFECT_ADJUST", False) and getattr(M, "REV_DECLINE_TAG", None)
+    if lim and (c.get("rev_max_decline") or 0) >= lim:
+        gp, op = c.get("rev_growth_vs_peak"), c.get("opm_change_vs_peak")
+        if gp is not None and g is not None and gp < g:
+            g, c["base_effect_adj"] = gp, True
+        if op is not None and oc is not None and op < oc:
+            oc, c["base_effect_adj"] = op, True
+    c["growth_for_score"], c["opm_change_for_score"] = g, oc
+
+
 def score(passed):
     """1층 통과 종목 목록에 자동 점수를 붙인다 (미국 74점, 한국 71점 만점)."""
     if not passed:
         return
-    rg_pct = _pct_rank([c.get("rev_growth") for c in passed])
+    for c in passed:
+        _base_effect(c)
+    rg_pct = _pct_rank([c.get("growth_for_score") for c in passed])
     for c, rp in zip(passed, rg_pct):
         s = {}
         s["S1"] = round((rp or 0) * 8, 1)
@@ -356,10 +374,10 @@ def score(passed):
         s["S3"] = 4 if (c.get("gp_growth") is not None and c.get("rev_growth") is not None
                          and c["gp_growth"] >= c["rev_growth"]) else 0
         s["S5"] = round((c.get("gp_to_assets_ind_pct") or 0) * 8, 1)
-        s["S6"] = _band(c.get("opm_change"), [(0.05, 7), (0.02, 4), (0.0, 1)])
+        s["S6"] = _band(c.get("opm_change_for_score"), [(0.05, 7), (0.02, 4), (0.0, 1)])
         r40 = None
-        if c.get("rev_growth") is not None and c.get("fcf_margin") is not None:
-            r40 = (c["rev_growth"] + c["fcf_margin"]) * 100
+        if c.get("growth_for_score") is not None and c.get("fcf_margin") is not None:
+            r40 = (c["growth_for_score"] + c["fcf_margin"]) * 100
         c["rule_of_40"] = r40
         s["S7"] = _band(r40, [(60, 5), (40, 3)])
         d = c.get("dilution")
@@ -447,8 +465,8 @@ def entry_tags(c):
             tags.append("부채 주의")
     if c.get("gpm") is None:
         tags.append("매출총이익률 미공시")
-    # 최근 10-K 연간 매출이 한 해라도 10% 넘게 줄었으면 표시 (점수 아님): 지금의 성장·마진 개선이
-    # 바닥에서의 반등(기저 효과)일 수 있음. 점수화는 성과 검증 후 결정
+    # 최근 10-K 연간 매출이 한 해라도 10% 넘게 줄었으면 표시: 지금의 성장·마진 개선이
+    # 바닥에서의 반등(기저 효과)일 수 있음. 미국은 점수도 보정 (_base_effect)
     lim = getattr(M, "REV_DECLINE_TAG", None)   # 미국만 (한국 설정에는 없음)
     if lim is not None and (c.get("rev_max_decline") or 0) >= lim:
         tags.append(f"연매출 감소 이력 (최대 -{c['rev_max_decline']:.0%})")

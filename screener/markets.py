@@ -60,6 +60,7 @@ US = types.SimpleNamespace(
     SUBJECT="[스크리너]",
     CAP_BANDS=[(2e9, 3), (5e9, 2), (10e9, 1)],     # 시총 미만 → 점수 (2026-11-16 6/4/2/1 → 3/2/1/0)
     CAP_FLOOR=0,                                    # 그 외 시총 점수
+    BASE_EFFECT_ADJUST=True,                        # 연매출 감소 이력 종목은 S1·S6·S7을 직전 고점 대비로 (screen._base_effect)
 
     USE_SHORT=True,
     INDUSTRY_LABEL="같은 업종(SIC)",

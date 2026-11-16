@@ -1,4 +1,5 @@
 """분기 시계열 → 스크리닝 지표. 모든 비율은 소수(0.25 = 25%)."""
+import datetime as dt
 
 
 def _sum(vals):
@@ -114,6 +115,19 @@ def compute(series):
     ann = [v for _, v in series.get("annual_revenue") or []]
     drops = [1 - b / a for a, b in zip(ann, ann[1:]) if a and a > 0 and b is not None]
     m["rev_max_decline"] = max([0.0] + drops) if drops else None
+
+    # 기저 효과 보정: 연매출 감소 이력이 있으면 '직전 고점 대비' 성장률과 영업이익률 변화도 계산한다.
+    # 바닥에서의 반등은 전년 대비로 보면 과장되므로, 점수(S1·S6·S7)는 둘 중 낮은 값을 쓴다 (screen.score)
+    m["rev_growth_vs_peak"] = m["opm_change_vs_peak"] = None
+    ann_rev = series.get("annual_revenue") or []
+    if drops and rev is not None and ann_rev:
+        peak_end, peak = max(ann_rev, key=lambda x: x[1])
+        years = (dt.date.fromisoformat(m["period_end"]) - dt.date.fromisoformat(peak_end)).days / 365.25
+        if peak and peak > 0 and years >= 0.5 and rev > 0:
+            m["rev_growth_vs_peak"] = (rev / peak) ** (1 / years) - 1
+            pk_op = dict(series.get("annual_op_income") or []).get(peak_end)
+            if pk_op is not None and m["opm"] is not None:
+                m["opm_change_vs_peak"] = m["opm"] - pk_op / peak
 
     m["profitable"] = op is not None and op > 0
     if m["profitable"] and m["ebitda_ttm"] and m["ebitda_ttm"] > 0 and m["net_debt"] is not None:

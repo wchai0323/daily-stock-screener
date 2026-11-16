@@ -153,15 +153,30 @@ def test_g_lane_pass_and_scoring():
     assert "S19" not in good["scores"]
 
 
-def test_rev_decline_tag_only():
-    """연매출 감소 이력은 태그만 붙이고 점수는 바꾸지 않는다."""
-    rows = [_company(f"C{i}", make_facts(REV, gpm=0.6), rev_max_decline=d)
+def test_base_effect_adjustment():
+    """연매출 감소 이력(10%+)이 있으면 S1·S6·S7을 직전 고점 대비 값으로 매긴다. 감소 이력이 작으면 그대로."""
+    kw = dict(rev_growth_vs_peak=0.05, opm_change_vs_peak=0.01)
+    rows = [_company(f"C{i}", make_facts(REV, gpm=0.6), rev_max_decline=d, **kw)
             for i, d in enumerate([0.05, 0.26])] + _peers()
     screen.run(rows)
     screen.score(rows[:2])
-    assert rows[0]["auto_score"] == rows[1]["auto_score"]
-    assert not any(t.startswith("연매출 감소 이력") for t in screen.entry_tags(rows[0]))
-    assert "연매출 감소 이력 (최대 -26%)" in screen.entry_tags(rows[1])
+    small, big = rows[:2]
+    assert not small["base_effect_adj"] and big["base_effect_adj"]
+    assert big["growth_for_score"] == 0.05 and small["growth_for_score"] == small["rev_growth"]
+    assert big["scores"]["S6"] == 1 and big["scores"]["S7"] == 0
+    assert big["auto_score"] < small["auto_score"]
+    assert not any(t.startswith("연매출 감소 이력") for t in screen.entry_tags(small))
+    assert "연매출 감소 이력 (최대 -26%)" in screen.entry_tags(big)
+
+
+def test_vs_peak_metrics():
+    s = facts.build_series(facts.compact(make_facts(REV)))   # 마지막 분기 2026-06-30, TTM = 사분기 합
+    s["annual_revenue"] = [("2024-12-31", 600e6), ("2025-12-31", 400e6)]
+    s["annual_op_income"] = [("2024-12-31", 90e6), ("2025-12-31", 10e6)]
+    m = metrics.compute(s)
+    years = (dt.date(2026, 6, 30) - dt.date(2024, 12, 31)).days / 365.25
+    assert m["rev_growth_vs_peak"] == pytest.approx((sum(REV[-4:]) / 600e6) ** (1 / years) - 1)
+    assert m["opm_change_vs_peak"] == pytest.approx(m["opm"] - 0.15)
 
 
 def _restated_facts():

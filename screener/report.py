@@ -13,7 +13,7 @@ RESULT_COLS = [
     "net_debt_ebitda", "runway_months", "rule_of_40", "short_pct_float", "price", "range_pos", "ma200_gap",
     "entry_tags", "period_end", "latest_filed", "ind_group", "sic",
     "S1", "S2", "S3", "S5", "S6", "S7", "S8", "S9", "S10", "S12", "S13", "S18s",
-    "rev_max_decline",
+    "rev_max_decline", "rev_growth_vs_peak", "opm_change_vs_peak", "base_effect_adj",
 ]
 SNAPSHOT_COLS = [
     "ticker", "cik", "name", "exchange", "sic", "country", "mkt_cap", "price", "adv20", "revenue_ttm",

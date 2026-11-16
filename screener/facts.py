@@ -268,23 +268,34 @@ def _match(qmap, end, tol=12):
     return None
 
 
-def annual_revenue(compacted):
-    """최근 10-K가 같이 보여주는 연간 매출 [(종료일, 값)...] (보통 3개 연도).
+def annual_values(compacted, concept="revenue", filed=None):
+    """최근 10-K가 같이 보여주는 연간 값 [(종료일, 값)...] (보통 3개 연도).
 
     같은 공시에 실린 연도끼리만 써서 중단사업 재작성 전후 값이 섞이지 않게 한다.
+    filed를 주면 그 공시일 기준 (매출과 영업이익을 같은 10-K에서 읽을 때).
     """
-    tags, how = DURATION_CONCEPTS["revenue"]
+    tags, how = DURATION_CONCEPTS[concept]
     hist = _combined_history(compacted, tags, how)
     annual = {k: lst for k, lst in hist.items() if 350 <= _days(*k) <= 380}
     if not annual:
         return []
-    last = max(f for lst in annual.values() for f, _ in lst)
+    last = filed or max(f for lst in annual.values() for f, _ in lst)
     rows = []
     for (s, e), lst in annual.items():
         vals = [v for f, v in lst if f == last]
         if vals:
             rows.append((e, vals[0]))
     return sorted(rows)
+
+
+def annual_revenue(compacted):
+    return annual_values(compacted, "revenue")
+
+
+def annual_latest_filed(compacted):
+    tags, how = DURATION_CONCEPTS["revenue"]
+    fs = [f for k, lst in _combined_history(compacted, tags, how).items() if 350 <= _days(*k) <= 380 for f, _ in lst]
+    return max(fs) if fs else None
 
 
 def build_series(compacted):
@@ -299,7 +310,8 @@ def build_series(compacted):
     spine = consecutive_tail(rev_q)
     ends = [e for e, _ in spine]
 
-    series = {"end": ends, "revenue": [v for _, v in spine], "annual_revenue": annual_revenue(compacted)}
+    series = {"end": ends, "revenue": [v for _, v in spine], "annual_revenue": annual_revenue(compacted),
+              "annual_op_income": annual_values(compacted, "op_income", annual_latest_filed(compacted))}
     for name in ["cogs", "gross_profit", "op_income", "ocf", "capex", "da", "net_income"]:
         qm = quarterize(dur[name])
         # 매출이 기준 불일치로 빠진 분기는 다른 항목도 같은 이유로 틀리므로 비운다
