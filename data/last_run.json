@@ -1,38 +1,38 @@
 {
- "run_at_utc": "2026-11-17T21:25:57+00:00",
- "screen_date": "2026-11-17",
+ "run_at_utc": "2026-11-18T21:24:07+00:00",
+ "screen_date": "2026-11-18",
  "max_companies": null,
  "targets": 6022,
  "refreshed": {
-  "new": 2,
-  "recent_filers": 657,
+  "new": 0,
+  "recent_filers": 378,
   "stale": 0
  },
  "with_financials": 6022,
- "with_prices": 2150,
- "universe": 1404,
- "passed": 95,
+ "with_prices": 2148,
+ "universe": 1403,
+ "passed": 96,
  "lanes": {
   "G": 12,
-  "C": 16,
+  "C": 17,
   "T": 49,
   "R": 18
  },
  "priority": 10,
- "new": 0,
+ "new": 1,
  "exits": 0,
- "date": "2026-11-17",
+ "date": "2026-11-18",
  "mail": "sent",
  "yahoo": {
-  "tickers": 95,
+  "tickers": 96,
   "errors": {},
   "still_missing": [],
-  "filled_short_pct_float": 95,
-  "filled_pe_ttm": 81,
-  "filled_pe_fwd": 93,
-  "filled_peg": 65,
-  "filled_sector": 95,
-  "filled_industry": 95
+  "filled_short_pct_float": 96,
+  "filled_pe_ttm": 82,
+  "filled_pe_fwd": 94,
+  "filled_peg": 66,
+  "filled_sector": 96,
+  "filled_industry": 96
  },
- "sec_requests": 667
+ "sec_requests": 384
 }
