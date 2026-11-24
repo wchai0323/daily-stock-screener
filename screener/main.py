@@ -148,6 +148,9 @@ def main():
         if p:
             c.update(p)
             shares = screen.market_cap_shares(c.get("shares_out"), c.get("diluted_shares_last"))
+            if shares:
+                c["split_factor"] = screen.split_factor(c.get("splits"), c.get("latest_filed"))
+                shares *= c["split_factor"]
             c["mkt_cap"] = c["price"] * shares if shares else None
     log(f"주가 수신 {len(px):,}개")
 

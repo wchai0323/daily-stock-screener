@@ -377,6 +377,26 @@ def test_market_cap_shares_uses_larger_count():
     assert screen.market_cap_shares(None, None) is None
 
 
+def test_split_factor_after_filing():
+    # SEC 주식 수는 10-30 공시 기준, 11-20에 8:1 분할 → 주식 수 8배
+    assert screen.split_factor([("2026-11-20", 8.0)], "2026-10-30") == 8.0
+    # 공시 전 분할은 SEC 주식 수에 이미 반영됨
+    assert screen.split_factor([("2026-03-02", 4.0)], "2026-10-30") == 1.0
+    assert screen.split_factor([("2026-11-20", 0.1)], "2026-10-30") == 0.1   # 1:10 병합
+    assert screen.split_factor([], "2026-10-30") == 1.0
+    assert screen.split_factor(None, None) == 1.0
+
+
+def test_summarize_reads_splits():
+    import pandas as pd
+    from screener import prices
+    idx = pd.date_range("2026-10-23", periods=25, freq="B")
+    df = pd.DataFrame({"Close": [800.0] * 19 + [100.0] * 6, "High": 1.0, "Low": 1.0, "Volume": 1e6,
+                       "Stock Splits": [0.0] * 19 + [8.0] + [0.0] * 5}, index=idx)
+    assert prices.summarize(df)["splits"] == [(str(idx[19].date()), 8.0)]
+    assert prices.summarize(df.drop(columns="Stock Splits"))["splits"] == []
+
+
 def test_change_cause_classification():
     """신규·이탈 원인: 실적 반영 / 재무 수정 / 가격 변동 / 기준 변경."""
     from screener import report

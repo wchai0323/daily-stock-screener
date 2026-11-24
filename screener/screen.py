@@ -228,6 +228,17 @@ def market_cap_shares(cover_shares, diluted_shares):
     return max(vals) if vals else None
 
 
+def split_factor(splits, as_of):
+    """SEC 주식 수 기준일(as_of, 최신 공시일) 뒤에 일어난 분할 비율의 곱.
+    Yahoo 주가는 분할 반영(수정)인데 SEC 주식 수는 다음 공시 전까지 분할 전 값이라,
+    그대로 곱하면 시총이 분할 비율만큼 작게 나온다 (예: 2026-11 SNDK 8:1 분할 → 시총 1/8)."""
+    f = 1.0
+    for d, r in splits or []:
+        if r and r > 0 and (not as_of or d > as_of):
+            f *= r
+    return f
+
+
 def is_cyclical(c):
     return M.is_cyclical(c)
 

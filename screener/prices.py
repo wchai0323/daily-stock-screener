@@ -22,7 +22,16 @@ def summarize(df):
         "hi52": float(df["High"].max()),
         "lo52": float(df["Low"].min()),
         "ma200": float(close.tail(200).mean()) if len(close) >= 200 else None,
+        "splits": _splits(df),
     }
+
+
+def _splits(df):
+    """기간 중 주식분할 [(날짜, 비율)]. 8:1 분할이면 8.0, 1:10 병합이면 0.1. 열이 없으면 빈 목록."""
+    if "Stock Splits" not in df.columns:
+        return []
+    s = df["Stock Splits"].fillna(0)
+    return [(str(d.date()), float(r)) for d, r in s.items() if r and r > 0 and r != 1]
 
 
 # 마지막 fetch_prices 호출의 진단 (실행 요약에 남김)
@@ -39,7 +48,7 @@ def fetch_prices(tickers, chunk_size=150, pause=1.0):
         for attempt in range(3):
             try:
                 df = yf.download(chunk, period="1y", interval="1d", group_by="ticker",
-                                 auto_adjust=False, threads=True, progress=False)
+                                 auto_adjust=False, actions=True, threads=True, progress=False)
                 break
             except Exception as e:  # noqa: BLE001 - 네트워크 오류 시 재시도
                 diag["first_error"] = diag["first_error"] or f"{type(e).__name__}: {str(e)[:150]}"
