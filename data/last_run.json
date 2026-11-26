@@ -1,16 +1,16 @@
 {
- "run_at_utc": "2026-11-25T21:23:40+00:00",
- "screen_date": "2026-11-25",
+ "run_at_utc": "2026-11-26T21:23:39+00:00",
+ "screen_date": "2026-11-26",
  "max_companies": null,
  "targets": 6022,
  "refreshed": {
   "new": 0,
-  "recent_filers": 70,
+  "recent_filers": 84,
   "stale": 0
  },
  "with_financials": 6022,
  "with_prices": 2146,
- "universe": 1408,
+ "universe": 1409,
  "passed": 102,
  "lanes": {
   "G": 14,
@@ -19,9 +19,9 @@
   "R": 19
  },
  "priority": 11,
- "new": 2,
+ "new": 0,
  "exits": 0,
- "date": "2026-11-25",
+ "date": "2026-11-26",
  "mail": "sent",
  "yahoo": {
   "tickers": 102,
@@ -30,9 +30,9 @@
   "filled_short_pct_float": 102,
   "filled_pe_ttm": 87,
   "filled_pe_fwd": 100,
-  "filled_peg": 79,
+  "filled_peg": 78,
   "filled_sector": 102,
   "filled_industry": 102
  },
- "sec_requests": 76
+ "sec_requests": 91
 }
